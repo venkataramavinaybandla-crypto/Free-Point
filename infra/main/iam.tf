@@ -51,11 +51,33 @@ resource "aws_iam_policy" "app_policy" {
           "dynamodb:PutItem",
           "dynamodb:UpdateItem",
           "dynamodb:DeleteItem",
-          "dynamodb:DescribeTable"
+          "dynamodb:DescribeTable",
+          "dynamodb:Query",
+          "dynamodb:Scan"
         ]
         Resource = [
           aws_dynamodb_table.jobs.arn,
-          aws_dynamodb_table.idempotency.arn
+          aws_dynamodb_table.idempotency.arn,
+          aws_dynamodb_table.users.arn,
+          "${aws_dynamodb_table.users.arn}/index/*",
+          aws_dynamodb_table.invites.arn,
+          aws_dynamodb_table.sessions.arn,
+          aws_dynamodb_table.api_keys.arn,
+          "${aws_dynamodb_table.api_keys.arn}/index/*",
+          aws_dynamodb_table.usage_counters.arn,
+          aws_dynamodb_table.user_secrets.arn
+        ]
+      },
+      {
+        Sid    = "KMSKeyAccess"
+        Effect = "Allow"
+        Action = [
+          "kms:GenerateDataKey",
+          "kms:Decrypt",
+          "kms:DescribeKey"
+        ]
+        Resource = [
+          aws_kms_key.cmk.arn
         ]
       },
       {

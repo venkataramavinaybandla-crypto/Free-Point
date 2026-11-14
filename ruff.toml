@@ -1,4 +1,5 @@
 line-length = 120
+exclude = ["refs", ".venv"]
 
 [lint]
 select = ["E", "F", "I", "W"]

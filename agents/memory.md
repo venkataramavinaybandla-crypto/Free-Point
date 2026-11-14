@@ -21,6 +21,14 @@ Running record of decisions, corrections, and status. Update it whenever somethi
 - D16: MockLLM built in **P1**; load tests run against it.
 - D17: Cut line: Core = harness, auth, GitHub, RAG. Nice = Gmail. Drop first = RAE.
 - D18: Plan **frozen at v4**. No more review rounds; fix issues only when they block a phase.
+- D19: Single-use invite codes stored as SHA-256 hash only with expiry; created via `scripts/create_invite.py`.
+- D20: Passwords hashed with argon2id (`argon2-cffi`); random 32-byte sessions stored hashed with expiry, httpOnly + Secure + SameSite=Strict cookies, CSRF double-submit token on state-changing session routes.
+- D21: API keys follow format `fp_<prefix>_<secret>` (32+ bytes entropy, shown once, stored prefix + SHA-256 hash, max 5 active per user).
+- D22: Route isolation enforced: `require_api_key` for all `/v1` routes and `require_session` for web session routes; keys never work on session routes and vice versa.
+- D23: Per-key fixed-window rate limit (60s) and daily quota (86400s) with DynamoDB atomic ADD counters and `X-RateLimit-*`/`X-Quota-Remaining` headers on all `/v1` responses; `GET /v1/usage`.
+- D24: Idempotency bound to `user_id` plus request hash; same key + different payload returns 422.
+- D25: KMS envelope encryption (`GenerateDataKey` + `AES-256-GCM`), EncryptionContext = `user_id` + `tool`; `LocalKeyProvider` for dev/test; secrets decrypted at job time only and redacted from logs.
+- D26: Storage backend abstracted with `STORE_BACKEND=memory|dynamodb`.
 
 ## Corrections (history)
 - Early idea was an AI agent with built-in features. Corrected to HaaS.
@@ -41,7 +49,7 @@ Running record of decisions, corrections, and status. Update it whenever somethi
 | P0 Setup | done |
 | P1 Core harness | done |
 | P2 Skeleton deploy | done |
-| P3 Auth and API management | not started |
+| P3 Auth and API management | done |
 | P4 MCP tools | not started |
 | P5 Prove it | not started |
 | P6 Demo and report | not started |

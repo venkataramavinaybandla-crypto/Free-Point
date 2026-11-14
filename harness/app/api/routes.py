@@ -1,23 +1,31 @@
-"""API routes for jobs, model testing, and health checks."""
+"""API routes for jobs, model testing, usage, and health checks."""
 
+import hashlib
+import json
+import os
+import time
 import uuid
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
 from pydantic import BaseModel, Field
 
+from ..auth.dependencies import AuthenticatedKey, require_api_key
 from ..core.agent_loop import AgentLoop
 from ..core.tools import ToolRegistry
+from ..crypto.envelope import EnvelopeEncryptor
 from ..providers.mock_provider import get_llm_provider
 from ..providers.openai_client import OpenAICompatibleProvider
 from ..security.ssrf import SSRFError, SSRFValidator, create_safe_client
-from ..store.memory import InMemoryJobStore, InMemoryQueue
-from .dependencies import get_api_key
+from ..store.factory import (
+    get_idempotency_store,
+    get_job_store,
+    get_queue,
+    get_secret_store,
+    get_usage_store,
+)
 
 router = APIRouter()
-
-job_store = InMemoryJobStore()
-job_queue = InMemoryQueue()
 tool_registry = ToolRegistry()
 
 
@@ -40,10 +48,11 @@ class JobResponse(BaseModel):
     approval_artifact: Optional[Dict[str, Any]] = None
     idempotency_key: Optional[str] = None
     model_url: Optional[str] = None
+    user_id: Optional[str] = None
 
 
 class TestModelRequest(BaseModel):
-    model_url: str = Field(..., description="OpenAI-compatible /v1 endpoint URL")
+    model_url: Optional[str] = Field(None, description="OpenAI-compatible /v1 endpoint URL (or use stored secret)")
     api_key: Optional[str] = Field(None, description="Optional Bearer token")
 
 
@@ -53,9 +62,18 @@ class TestModelResponse(BaseModel):
     message: str
 
 
+class UsageResponse(BaseModel):
+    key_id: str
+    rate_limit: int
+    rate_remaining: int
+    rate_reset: int
+    daily_quota: int
+    quota_remaining: int
+
+
 @router.get("/health", tags=["System"])
 async def health_check() -> Dict[str, str]:
-    """Health check endpoint for ALB and container monitors."""
+    """Health check endpoint for ALB and container monitors (public, no auth)."""
     return {"status": "ok", "service": "free-point-harness"}
 
 
@@ -64,36 +82,87 @@ async def create_job(
     req: CreateJobRequest,
     response: Response,
     idempotency_key: Optional[str] = Header(None, alias="Idempotency-Key"),
-    api_key: Optional[str] = Depends(get_api_key),
+    caller: AuthenticatedKey = Depends(require_api_key),
 ) -> JobResponse:
     """Create and enqueue a new harness job."""
     request_id = f"req-{uuid.uuid4().hex[:8]}"
+    job_store = get_job_store()
+    job_queue = get_queue()
+    idempotency_store = get_idempotency_store()
+    secret_store = get_secret_store()
 
-    if req.model_url:
+    # Determine effective model URL
+    effective_model_url = req.model_url
+    if not effective_model_url:
+        stored_enc = await secret_store.get_secret(caller.user_id, "model_url")
+        if stored_enc:
+            encryptor = EnvelopeEncryptor()
+            effective_model_url = encryptor.decrypt(stored_enc, user_id=caller.user_id, tool="model_url")
+
+    # Wire P1 SSRF guard: re-validate on every job start
+    if effective_model_url:
         validator = SSRFValidator()
         try:
-            validator.validate_url(req.model_url)
+            validator.validate_url(effective_model_url)
         except SSRFError as e:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
+    # Idempotency check bound to user_id plus request hash
+    req_bytes = json.dumps(req.model_dump(), sort_keys=True).encode("utf-8")
+    req_hash = hashlib.sha256(req_bytes).hexdigest()
+
     if idempotency_key:
-        existing = await job_store.get_by_idempotency_key(idempotency_key)
-        if existing:
-            response.status_code = status.HTTP_200_OK
-            return JobResponse(**existing.model_dump())
+        composite_key = f"{caller.user_id}:{idempotency_key}"
+        existing_record = await idempotency_store.get_record(composite_key)
+        if existing_record:
+            if existing_record["request_hash"] != req_hash:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail="Idempotency key reused with different request payload.",
+                )
+            cached_job = await job_store.get_job(existing_record["response_body"]["id"])
+            if cached_job:
+                response.status_code = status.HTTP_200_OK
+                return JobResponse(**cached_job.model_dump())
 
     job = await job_store.create_job(
         task=req.task,
         declared_tools=req.tools,
         idempotency_key=idempotency_key,
-        model_url=req.model_url,
+        model_url=effective_model_url,
+        user_id=caller.user_id,
     )
     await job_queue.enqueue(job.id)
 
-    provider = OpenAICompatibleProvider(base_url=job.model_url) if job.model_url else get_llm_provider()
+    # Resolve optional stored bearer token if using custom model
+    bearer_token: Optional[str] = None
+    if effective_model_url:
+        enc_token = await secret_store.get_secret(caller.user_id, "model_bearer_token")
+        if enc_token:
+            encryptor = EnvelopeEncryptor()
+            bearer_token = encryptor.decrypt(enc_token, user_id=caller.user_id, tool="model_bearer_token")
+
+    provider = (
+        OpenAICompatibleProvider(base_url=job.model_url, api_key=bearer_token)
+        if job.model_url
+        else get_llm_provider()
+    )
     loop = AgentLoop(provider=provider, tool_registry=tool_registry)
     updated_job = await loop.run(job, request_id=request_id)
     await job_store.update_job(updated_job)
+
+    # Save idempotency record
+    if idempotency_key:
+        composite_key = f"{caller.user_id}:{idempotency_key}"
+        expires_at = int(time.time()) + 86400
+        await idempotency_store.save_record(
+            composite_key=composite_key,
+            user_id=caller.user_id,
+            request_hash=req_hash,
+            status_code=status.HTTP_201_CREATED,
+            response_body={"id": updated_job.id},
+            expires_at=expires_at,
+        )
 
     return JobResponse(**updated_job.model_dump())
 
@@ -101,9 +170,10 @@ async def create_job(
 @router.get("/v1/jobs/{job_id}", response_model=JobResponse, tags=["Jobs"])
 async def get_job(
     job_id: str,
-    api_key: Optional[str] = Depends(get_api_key),
+    caller: AuthenticatedKey = Depends(require_api_key),
 ) -> JobResponse:
     """Retrieve current job execution status and results."""
+    job_store = get_job_store()
     job = await job_store.get_job(job_id)
     if not job:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Job '{job_id}' not found")
@@ -113,12 +183,34 @@ async def get_job(
 @router.post("/v1/model/test", response_model=TestModelResponse, tags=["Model"])
 async def test_model_endpoint(
     req: TestModelRequest,
-    api_key: Optional[str] = Depends(get_api_key),
+    caller: AuthenticatedKey = Depends(require_api_key),
 ) -> TestModelResponse:
     """Validate user-provided model endpoint URL for SSRF compliance and reachability."""
+    secret_store = get_secret_store()
+    target_url = req.model_url
+    bearer_token = req.api_key
+
+    if not target_url:
+        stored_enc = await secret_store.get_secret(caller.user_id, "model_url")
+        if stored_enc:
+            encryptor = EnvelopeEncryptor()
+            target_url = encryptor.decrypt(stored_enc, user_id=caller.user_id, tool="model_url")
+
+    if not target_url:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No model_url provided or stored for user.",
+        )
+
+    if not bearer_token:
+        stored_tok_enc = await secret_store.get_secret(caller.user_id, "model_bearer_token")
+        if stored_tok_enc:
+            encryptor = EnvelopeEncryptor()
+            bearer_token = encryptor.decrypt(stored_tok_enc, user_id=caller.user_id, tool="model_bearer_token")
+
     validator = SSRFValidator()
     try:
-        validator.validate_url(req.model_url)
+        validator.validate_url(target_url)
     except SSRFError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -127,10 +219,10 @@ async def test_model_endpoint(
 
     try:
         async with create_safe_client(validator=validator, timeout=5.0) as client:
-            test_url = f"{req.model_url.rstrip('/')}/models"
+            test_url = f"{target_url.rstrip('/')}/models"
             headers = {}
-            if req.api_key:
-                headers["Authorization"] = f"Bearer {req.api_key}"
+            if bearer_token:
+                headers["Authorization"] = f"Bearer {bearer_token}"
             resp = await client.get(test_url, headers=headers)
             message = f"Endpoint reachable, HTTP status: {resp.status_code}"
     except Exception as err:
@@ -138,6 +230,18 @@ async def test_model_endpoint(
 
     return TestModelResponse(
         status="verified",
-        model_url=req.model_url,
+        model_url=target_url,
         message=message,
     )
+
+
+@router.get("/v1/usage", response_model=UsageResponse, tags=["API Management"])
+async def get_usage(
+    caller: AuthenticatedKey = Depends(require_api_key),
+) -> UsageResponse:
+    """Retrieve the caller API key rate limit and daily quota usage counters."""
+    rate_limit = int(os.environ.get("RATE_LIMIT_PER_MINUTE", "60"))
+    daily_quota = int(os.environ.get("DAILY_QUOTA", "1000"))
+    usage_store = get_usage_store()
+    usage = await usage_store.get_usage(caller.key_id, rate_limit, daily_quota)
+    return UsageResponse(**usage)

@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 
 from .api.routes import router
+from .auth.routes import auth_router
 
 app = FastAPI(
     title="Free Point Agent Harness",
@@ -12,4 +13,5 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+app.include_router(auth_router)
 app.include_router(router)

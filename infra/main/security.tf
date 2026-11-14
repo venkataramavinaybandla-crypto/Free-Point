@@ -83,3 +83,18 @@ resource "aws_security_group" "nat" {
     Name = "free-point-nat-sg"
   }
 }
+
+resource "aws_kms_key" "cmk" {
+  description             = "Free Point KMS CMK for envelope encryption of user secrets"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  tags = {
+    Name = "free-point-cmk"
+  }
+}
+
+resource "aws_kms_alias" "cmk_alias" {
+  name          = "alias/free-point-cmk"
+  target_key_id = aws_kms_key.cmk.key_id
+}

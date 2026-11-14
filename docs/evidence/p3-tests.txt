@@ -1,0 +1,68 @@
+﻿================================================================================
+Free Point Phase P3 Test & Validation Evidence
+Date: 2026-11-14 20:34:46 +05:30
+================================================================================
+
+--- 1. Ruff Linter & Formatter Check ---
+All checks passed!
+
+
+--- 2. Terraform FMT & Validate Check ---
+
+[32m[1mSuccess![0m The configuration is valid.
+[0m
+
+
+--- 3. Pytest Test Suite Execution ---
+============================= test session starts =============================
+platform win32 -- Python 3.13.17, pytest-9.2.0, pluggy-1.7.0 -- C:\Free Point\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Free Point
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.16.0, asyncio-1.5.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 39 items
+
+tests/test_agent_loop.py::test_schema_retry_recovers_on_good_json PASSED [  2%]
+tests/test_agent_loop.py::test_schema_retry_exhaustion_fails PASSED      [  5%]
+tests/test_agent_loop.py::test_allowlist_rejection_of_undeclared_tool PASSED [  7%]
+tests/test_agent_loop.py::test_step_cap_enforcement PASSED               [ 10%]
+tests/test_agent_loop.py::test_time_cap_enforcement PASSED               [ 12%]
+tests/test_agent_loop.py::test_end_to_end_job_with_mock_llm PASSED       [ 15%]
+tests/test_agent_loop.py::test_write_tool_pauses_for_approval PASSED     [ 17%]
+tests/test_api.py::test_health_endpoint PASSED                           [ 20%]
+tests/test_api.py::test_create_and_get_job PASSED                        [ 23%]
+tests/test_api.py::test_model_test_endpoint_rejects_ssrf PASSED          [ 25%]
+tests/test_auth.py::test_invite_single_use_and_expiry PASSED             [ 28%]
+tests/test_auth.py::test_signup_login_logout_flow_and_cookie_flags PASSED [ 30%]
+tests/test_auth.py::test_csrf_double_submit_protection PASSED            [ 33%]
+tests/test_auth.py::test_api_keys_lifecycle_and_show_once PASSED         [ 35%]
+tests/test_auth.py::test_wrong_key_and_revoked_key_401 PASSED            [ 38%]
+tests/test_auth.py::test_route_isolation_keys_never_work_on_session_routes_and_vice_versa PASSED [ 41%]
+tests/test_auth.py::test_rate_limiting_and_quota_headers PASSED          [ 43%]
+tests/test_auth.py::test_idempotency_key_conflict_422 PASSED             [ 46%]
+tests/test_auth.py::test_envelope_encryption_roundtrip_and_context_mismatch PASSED [ 48%]
+tests/test_auth.py::test_secret_never_present_in_logs_or_get_responses PASSED [ 51%]
+tests/test_dynamo_moto.py::test_kms_envelope_encryption_with_moto PASSED [ 53%]
+tests/test_dynamo_moto.py::test_dynamodb_stores_direct PASSED            [ 56%]
+tests/test_dynamo_moto.py::test_end_to_end_api_with_dynamodb_backend PASSED [ 58%]
+tests/test_idempotency.py::test_idempotency_key_deduplication PASSED     [ 61%]
+tests/test_idempotency.py::test_different_idempotency_keys_create_different_jobs PASSED [ 64%]
+tests/test_ssrf.py::test_ssrf_blocks_private_ipv4_10_x PASSED            [ 66%]
+tests/test_ssrf.py::test_ssrf_blocks_loopback_127_0_0_1 PASSED           [ 69%]
+tests/test_ssrf.py::test_ssrf_blocks_aws_metadata_169_254_169_254 PASSED [ 71%]
+tests/test_ssrf.py::test_ssrf_blocks_ipv6_loopback PASSED                [ 74%]
+tests/test_ssrf.py::test_ssrf_enforces_https_only PASSED                 [ 76%]
+tests/test_ssrf.py::test_ssrf_redirects_off PASSED                       [ 79%]
+tests/test_ssrf.py::test_ssrf_dns_rebinding_defense PASSED               [ 82%]
+tests/test_state.py::test_valid_transitions PASSED                       [ 84%]
+tests/test_state.py::test_invalid_transitions PASSED                     [ 87%]
+tests/test_state.py::test_terminal_states_have_no_transitions PASSED     [ 89%]
+tests/test_tools.py::test_echo_tool PASSED                               [ 92%]
+tests/test_tools.py::test_utc_time_tool PASSED                           [ 94%]
+tests/test_tools.py::test_write_tool_returns_approval_artifact PASSED    [ 97%]
+tests/test_tools.py::test_tool_registry PASSED                           [100%]
+
+============================= 39 passed in 6.01s ==============================
+
