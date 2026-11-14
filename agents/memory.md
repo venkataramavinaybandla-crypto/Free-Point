@@ -38,9 +38,9 @@ Running record of decisions, corrections, and status. Update it whenever somethi
 ## Status tracker
 | Phase | Status |
 |---|---|
-| P0 Setup \| done \|
-| P1 Core harness | not started |
-| P2 Skeleton deploy | not started |
+| P0 Setup | done |
+| P1 Core harness | done |
+| P2 Skeleton deploy | done |
 | P3 Auth and API management | not started |
 | P4 MCP tools | not started |
 | P5 Prove it | not started |

@@ -1,0 +1,25 @@
+[project]
+name = "free-point-harness"
+version = "0.1.0"
+description = "Free Point Agent Harness Service"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.162.0",
+    "uvicorn>=0.54.0",
+    "httpx>=0.28.0",
+    "pydantic>=2.14.0",
+    "jsonschema>=4.26.0",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = [".", "harness"]

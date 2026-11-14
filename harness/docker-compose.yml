@@ -1,0 +1,20 @@
+version: "3.8"
+
+networks:
+  harness_internal:
+    driver: bridge
+    internal: false
+
+services:
+  harness:
+    build:
+      context: ./harness
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=local
+      - LLM_PROVIDER=mock
+      - DEV_ALLOW_INSECURE_LOCAL=true
+    networks:
+      - harness_internal
