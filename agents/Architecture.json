@@ -1,0 +1,159 @@
+{
+  "project": {
+    "name": "Free Point",
+    "type": "Agent Harness as a Service (HaaS)",
+    "summary": "Users sign up, receive an API key, and connect any OpenAI-compatible model to the harness API. The harness turns that model into an agent with tools exposed through MCP servers.",
+    "course": "Cloud Infrastructure and Services (25CS2206E)",
+    "problem_statement": "Project 19 - API Management and Microservices Application",
+    "architecture_version": "v4 (frozen)",
+    "language": "Python",
+    "frameworks": ["FastAPI", "FastMCP", "boto3", "httpx", "fastembed (ONNX)", "FAISS"],
+    "course_outcomes_covered": {
+      "CO2": "Docker on EC2 Auto Scaling, SQS-backlog scaling",
+      "CO3": "Custom VPC, public/private subnets, ALB, NAT instance, gateway endpoints",
+      "CO4": "S3 (artifacts, FAISS indexes), DynamoDB (state), SQS, backup of job state via TTL and PITR",
+      "CO5": "IAM instance profiles, KMS envelope encryption, SSM SecureString, CloudTrail, CloudWatch",
+      "CO6": "Terraform (bootstrap + main stack), budget alarm, cost evidence, break-fix drills"
+    }
+  },
+
+  "model_layer": {
+    "serving": "llama.cpp llama-server on Colab, Qwen3-1.7B GGUF, exposed through ngrok",
+    "protocol": "OpenAI-compatible /v1/chat/completions with configurable base_url",
+    "constrained_decoding": "response_format json_schema (grammar) enforced by llama-server",
+    "context_cap_tokens": 4096,
+    "fallbacks": ["MockLLMProvider (deterministic, configurable latency 5-30s)", "any local or hosted OpenAI-compatible endpoint"],
+    "model_url_rules": "https only, re-validated on every job, SSRF-guarded, stored encrypted"
+  },
+
+  "services": [
+    {"name": "web", "role": "Signup (invite code), login, key issue/rotate/revoke, usage dashboard, PR approval UI", "auth": "session cookie"},
+    {"name": "api-gateway", "role": "Public /v1 API: versioning, OpenAPI docs, API-key auth, rate limit and quota, 429 + Retry-After, idempotency keys, enqueue jobs", "auth": "API key (SHA-256 hashed)"},
+    {"name": "harness-worker", "role": "SQS consumer: agent loop, tool routing, schema validation, retries, taint tracking, audit log, writes job state", "limits": {"max_steps": 6, "max_job_seconds": 120, "sqs_visibility_timeout_seconds": 180}},
+    {"name": "model-egress", "role": "Small no-AWS-credentials container that calls user model URLs; connect-time peer-IP validation, pinned IP with original SNI/Host, no redirects, size caps"},
+    {"name": "mcp-github", "role": "FastMCP: read repo, create DRAFT PR on a branch only. Never pushes to main. Execute step runs from stored, hash-approved PR artifact"},
+    {"name": "mcp-rag", "role": "FastMCP: fastembed embeddings, per-user FAISS index in S3, versioned objects with DynamoDB conditional-write pointer"},
+    {"name": "mcp-gmail", "role": "FastMCP: read-only, summarize an email in 2 lines. No write scopes. Nice-to-have"},
+    {"name": "mcp-rae", "role": "Static analysis of binaries and repos. Never executes anything. Parser runs in a --network none child container. First feature to drop if time runs out", "placement": "separate instance, own profile, own queue, zero KMS permission"}
+  ],
+
+  "network": {
+    "region": {"value": "ap-south-1", "status": "proposed, confirm before P2"},
+    "vpc_cidr": "10.20.0.0/16",
+    "azs": 2,
+    "subnets": {
+      "public": ["10.20.0.0/24", "10.20.1.0/24"],
+      "private_app": ["10.20.10.0/24", "10.20.11.0/24"]
+    },
+    "alb": {"listeners": ["443 (ACM cert)", "80 -> 443 redirect"], "placement": "public subnets"},
+    "egress": {"type": "NAT instance (t3.nano, x86)", "notes": "source_dest_check=false, iptables MASQUERADE persisted via user_data/systemd, single point of failure (documented limitation)"},
+    "vpc_endpoints": ["S3 gateway (free)", "DynamoDB gateway (free)"],
+    "no_interface_endpoints": "each costs about $7/month per AZ",
+    "security_groups": {
+      "alb": "443/80 from internet",
+      "app": "app port from ALB SG only; outbound 443",
+      "rae": "no inbound; outbound to SQS/S3 only",
+      "nat": "inbound from private subnets only"
+    },
+    "imds": "IMDSv2 required, hop limit 2, DOCKER-USER rule drops 169.254.169.254 for containers without AWS creds (persisted)"
+  },
+
+  "compute": {
+    "app_asg": {"instance": "t3.medium (x86)", "min": 1, "max": 2, "layout": "Docker Compose on internal bridge network; only api-gateway/web exposed to ALB", "scaling": "target tracking on ApproximateNumberOfMessagesVisible / GroupInServiceInstances (metric math)", "scale_in": "SIGTERM draining or scale-in protection"},
+    "rae_asg": {"instance": "t3.small (x86)", "min": 1, "max": 1},
+    "nat": {"instance": "t3.nano (x86)", "count": 1},
+    "deploy": "Build image -> push to ECR -> ASG instance refresh. No SSH."
+  },
+
+  "data": {
+    "dynamodb": {
+      "billing_mode": "PAY_PER_REQUEST",
+      "tables": [
+        "users", "invites (hashed, single-use, expiry)", "sessions", "api_keys (hash + prefix)",
+        "jobs (TTL)", "approvals (single-use, expiry, hash-bound)", "idempotency (TTL)",
+        "usage_counters (atomic)", "rag_pointers (conditional write)", "user_secrets (KMS envelope: GitHub/Gmail tokens, model URL and token)"
+      ]
+    },
+    "s3": ["artifacts (uploads, PR artifacts)", "rag-indexes (versioned FAISS objects)", "tf-state (bootstrap stack)"],
+    "sqs": ["jobs + jobs-dlq (maxReceiveCount 2)", "execute (post-approval)", "rae + rae-dlq"],
+    "kms": "1 CMK; encryption context user_id+tool for audit/integrity (not isolation)",
+    "ssm_parameter_store": "SecureString for Google OAuth client secret and our own secrets",
+    "ecr": "one repo per service image, scan on push"
+  },
+
+  "api": {
+    "public_v1": [
+      "POST /v1/jobs (Idempotency-Key, declared tools[])",
+      "GET /v1/jobs/{id} (poll with backoff)",
+      "POST /v1/model/test",
+      "GET /v1/usage"
+    ],
+    "web_session": [
+      "POST /auth/signup (invite code)", "POST /auth/login", "POST /keys/rotate", "POST /keys/revoke",
+      "POST /approvals/{id}/approve", "POST /approvals/{id}/reject"
+    ],
+    "docs": "auto-generated OpenAPI at /docs",
+    "rate_limit": "DynamoDB atomic counters, 429 with Retry-After and quota headers",
+    "job_states": ["QUEUED", "RUNNING", "AWAITING_APPROVAL", "APPROVED", "EXECUTING", "COMPLETED", "FAILED", "TIMED_OUT", "REJECTED"]
+  },
+
+  "security_policy": {
+    "principles": ["Policy lives in code, never in the prompt", "All tool output is untrusted data", "Approve endpoint is never reachable as a model tool"],
+    "write_policy": "Every GitHub write needs human approval, single-use, expiring, bound to hash(user_id, job_id, repo, base, head, title, body, diff). Worker acks and exits at AWAITING_APPROVAL; approval enqueues an execute message that runs the stored artifact.",
+    "taint": "tainted_by_untrusted_source flag recorded in audit log (evidence), not used as the gate",
+    "ssrf": "https only, resolve and validate every IP (IPv4 and IPv6 private/loopback/link-local blocked), validate peer IP at connect time, pinned IP with original SNI/Host, redirects off, response size cap",
+    "analyzer_sandbox": "no network, read-only FS, non-root, CPU/memory/time/size limits, archive-bomb and zip-slip checks, git hooks disabled, submodules/LFS/symlinks not followed",
+    "tenant_isolation": "tenant id in every key/prefix; cross-tenant leak test required",
+    "secrets": "API keys and invite codes stored hashed; user tokens KMS-envelope-encrypted in DynamoDB; our secrets in SSM",
+    "signup": "invite codes only, rate-limited"
+  },
+
+  "observability": {
+    "logs": "structured JSON with request_id, job_id, user_id; tool-call audit log; retention 7 days",
+    "dashboards": ["API latency and errors", "SQS backlog per instance", "ASG size", "per-key usage"],
+    "alarms": ["budget", "DLQ depth > 0", "5xx rate", "queue backlog age"],
+    "trail": "CloudTrail for IAM denial evidence"
+  },
+
+  "cost_guardrails": [
+    "AWS Budget alarm created in P0",
+    "ASG max 2",
+    "DynamoDB on-demand",
+    "No interface endpoints, no managed NAT gateway",
+    "Per-job caps on steps, tokens, wall time",
+    "Polling with exponential backoff",
+    "terraform destroy after every session (teardown is graded)"
+  ],
+
+  "scope": {
+    "core": ["harness", "auth and API management", "mcp-github", "mcp-rag"],
+    "nice": ["mcp-gmail"],
+    "drop_first": ["mcp-rae"]
+  },
+
+  "known_limitations": [
+    "Single NAT instance",
+    "ASG max 2, not real HA",
+    "Shared instance role on app hosts (partly mitigated: RAE on its own instance)",
+    "Gmail OAuth in testing mode",
+    "Colab dependency (MockLLM backup)"
+  ],
+
+  "evidence_plan": {
+    "taint_audit_and_blocked_pr": "audit log shows flag flip and AWAITING_APPROVAL",
+    "iam_denial": "AccessDenied entry in CloudTrail",
+    "break_fixes": ["kill instance mid-job, SQS redelivers, no duplicate PR", "NAT down", "IAM deny"],
+    "tests": ["injection suite (10-20 malicious emails/READMEs)", "cross-tenant RAG leak test", "load test on MockLLM showing ASG scale-out"],
+    "artifacts": ["terraform plan output", "cost report", "dashboard screenshots"]
+  },
+
+  "phases": [
+    {"id": "P0", "name": "Setup", "outputs": ["repo + Agents.md + persona_maaaaa.txt", "AWS + MFA + budget alarm", "Terraform bootstrap stack", "1-page threat model"]},
+    {"id": "P1", "name": "Core harness (local)", "outputs": ["FastAPI harness", "MockLLM", "constrained decoding", "job states", "audit logs"]},
+    {"id": "P2", "name": "Skeleton deploy", "outputs": ["VPC, ALB with HTTPS, ASG, NAT instance, SQS, DynamoDB", "ECR + instance refresh", "/health over HTTPS"]},
+    {"id": "P3", "name": "Auth and API management", "outputs": ["invite signup, sessions", "API keys, rotate/revoke", "rate limit, quota, idempotency"]},
+    {"id": "P4", "name": "MCP tools (tests written per tool)", "outputs": ["GitHub", "RAG", "Gmail (nice)", "RAE (drop first)"]},
+    {"id": "P5", "name": "Prove it", "outputs": ["load test", "injection and tenant tests", "IAM denial", "3 break-fixes", "cost report"]},
+    {"id": "P6", "name": "Demo and report", "outputs": ["PPT", "README", "3-minute demo with mock backup", "teardown proof"]}
+  ]
+}

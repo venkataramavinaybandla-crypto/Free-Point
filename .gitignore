@@ -1,0 +1,10 @@
+refs/
+.env*
+*.tfstate*
+.terraform/
+__pycache__/
+.venv/
+*.pem
+node_modules/
+credentials*.json
+token*.json
