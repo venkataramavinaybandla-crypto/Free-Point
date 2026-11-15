@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&amp;family=Geist+Mono:wght@400;500;600&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"primary-container":"#19c3c9","inverse-surface":"#e1e2ea","on-primary-container":"#004b4e","on-surface":"#f1f3f9","surface-container-high":"rgba(255,255,255,0.08)","on-error-container":"#ffdad6","primary-fixed-dim":"#44dae0","inverse-primary":"#00696d","primary-fixed":"#69f7fd","on-surface-variant":"#cbd5e1","on-secondary-fixed-variant":"#003cac","surface-container":"rgba(255,255,255,0.05)","on-secondary":"#00297a","background":"#0c0f14","error-container":"rgba(239,68,68,0.15)","on-secondary-fixed":"#00174d","on-tertiary-fixed":"#24005a","tertiary":"#d6c2ff","secondary-fixed":"#dbe1ff","surface-tint":"#44dae0","surface-container-low":"rgba(255,255,255,0.03)","outline":"rgba(255,255,255,0.2)","on-primary-fixed-variant":"#004f52","on-tertiary-fixed-variant":"#5900c7","on-background":"#f1f3f9","surface-container-lowest":"rgba(255,255,255,0.02)","primary":"#ffffff","on-primary-fixed":"#002021","tertiary-fixed":"#eaddff","surface-dim":"#0c0f14","on-secondary-container":"#d8dfff","inverse-on-surface":"#2d3036","surface-container-highest":"rgba(255,255,255,0.1)","error":"#fca5a5","on-tertiary":"#3e008f","surface":"#0c0f14","outline-variant":"rgba(255,255,255,0.12)","secondary-container":"#0055ea","secondary-fixed-dim":"#b5c4ff","surface-variant":"rgba(255,255,255,0.06)","on-error":"#690005","on-tertiary-container":"#5400be","tertiary-container":"#bea0ff","surface-bright":"rgba(255,255,255,0.15)","on-primary":"#0a0a0a","tertiary-fixed-dim":"#d2bcff","secondary":"#b5c4ff"},fontFamily:{headline:["Fraunces","serif"],body:["Manrope","sans-serif"],mono:["Geist Mono","monospace"]}}}}</script><style>
+  @layer base {
+    html, body { margin: 0; padding: 0; }
+    body { overscroll-behavior: none; }
+  }
+  ::-webkit-scrollbar { display: none; }
+
+  /* True Liquid Crystal Glass */
+  .crystal-card {
+    position: relative;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1.5px solid rgba(255, 255, 255, 0.28);
+    box-shadow: 
+      inset 0 1px 1px 0 rgba(255, 255, 255, 0.35),
+      inset 0 -1px 2px 0 rgba(0, 0, 0, 0.12),
+      0 16px 36px -10px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+  }
+  .crystal-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 65%;
+    height: 65%;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.03) 40%, transparent 60%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Smoked Glass for Code/Terminal */
+  .smoked-terminal {
+    position: relative;
+    background: rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1.5px solid rgba(255, 255, 255, 0.22);
+    box-shadow: 
+      inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.3),
+      inset 0 -1px 2px 0 rgba(0, 0, 0, 0.2),
+      0 16px 36px -10px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+  }
+  .smoked-terminal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 65%;
+    height: 65%;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.02) 40%, transparent 60%);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Top Navigation Floating Capsule */
+  .nav-capsule {
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1.5px solid rgba(255, 255, 255, 0.32);
+    box-shadow: 
+      inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.4),
+      inset 0 -1px 2px 0 rgba(0, 0, 0, 0.15),
+      0 16px 36px -10px rgba(0, 0, 0, 0.25);
+  }
+  .nav-streak {
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transform: translateX(-100%);
+    transition: transform 1.2s ease;
+  }
+  .nav-capsule:hover .nav-streak {
+    transform: translateX(200%);
+  }
+
+  .text-glow-subtle {
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
+  }
+</style></head><body class="bg-transparent font-body text-white antialiased min-h-screen selection:bg-white selection:text-neutral-950 relative">
+<!-- FULL-BLEED VIBRANT DIAGONAL MESH GRADIENT + LIVE WEBGL SHADER -->
+<div class="fixed inset-0 w-full h-full -z-20 pointer-events-none" style="background: linear-gradient(135deg, #19C3C9 0%, #2F6BFF 20%, #8A4DFF 40%, #FF4FB6 60%, #FF4B55 80%, #FF9A3D 100%);"></div>
+
+<!-- FLOATING TOP NAVIGATION BAR -->
+<header class="fixed top-0 left-0 right-0 z-50 flex justify-center px-4 pt-4 pointer-events-none">
+<div class="pointer-events-auto relative w-full max-w-[1120px] h-16 rounded-full nav-capsule flex items-center justify-between px-6 transition-all duration-300 overflow-hidden group">
+<!-- Slow hover specular light streak -->
+<div class="nav-streak absolute inset-0 w-1/2 h-full pointer-events-none -skew-x-12"></div>
+<!-- Logo & Brand -->
+<div class="relative z-10 flex items-center gap-3 shrink-0">
+<img alt="Free Point Monogram" class="h-7 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/ALJJyrDnGX0m0hL9_zIv4JCuUVmCflZiZzKfJ4Royg4ASGtOQbeIUlsz3Yrlu1R_J_ycgOd34m-_3V_D7R5lLG7UxReZ6vyLvgGjIWZHNGNNBvVdZrxL6t8rcA9RGrsgbr50lAPpt7TMhr7UoMNLQldzj9RTFOpqGceCH9MGoyaNA044Sk-sXMD3b7m822cir99oP7kSZ4v6KapoEP4ChbUV6XOrlKiNymQa7wDOQebBGw"/>
+<span class="font-headline font-normal tracking-tight text-white text-lg">Free Point</span>
+</div>
+<!-- Center Nav Links -->
+<nav class="relative z-10 hidden md:flex items-center gap-1 p-1 rounded-full bg-white/[0.08] border border-white/20">
+<a class="px-4 py-1.5 rounded-full text-[13px] font-medium transition-all bg-white/[0.18] text-white shadow-sm" href="#">Product</a>
+<a class="px-4 py-1.5 rounded-full text-[13px] font-medium text-white/80 hover:text-white hover:bg-white/[0.1] transition-all" href="#">Tools</a>
+<a class="px-4 py-1.5 rounded-full text-[13px] font-medium text-white/80 hover:text-white hover:bg-white/[0.1] transition-all" href="#">Security</a>
+<a class="px-4 py-1.5 rounded-full text-[13px] font-medium text-white/80 hover:text-white hover:bg-white/[0.1] transition-all" href="#">Docs</a>
+</nav>
+<!-- Right Side Action: Developer Profile Avatar Dropdown -->
+<div class="relative z-10 flex items-center gap-3 shrink-0">
+<button aria-label="Developer Profile" class="flex items-center gap-1.5 pl-1 pr-2 py-1 rounded-full hover:bg-white/[0.12] text-white transition-colors" type="button">
+<img alt="Profile" class="w-7 h-7 rounded-full object-cover ring-1 ring-white/40" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-tclHEiFvMT5V49s5qvePg6SztGEw7yg8fGB8Zu8BQ_8MF5WMLWON-iPz0YS3M15Zp70bbLhTa4QIVHtRSAZ7uLHkYCSoXCgCdQZj-PQxKogE-xe01ymkHtBUoBHo0fovj5QpjigHyxE9NU7iCn_mBBcqgz8mk78NojaW9AXcossk9J2QI-V-2I5vASEvBOVgs4N0A1qYDljVSaIZl5LR-miz7hGbSYEkJF7KAw"/>
+<svg class="w-4 h-4 text-white/70" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</button>
+</div>
+</div>
+</header>
+<main class="relative z-10 w-full pt-16 bg-transparent min-h-screen">
+<div class="flex flex-col w-full relative text-white overflow-x-hidden">
+<!-- Noise stochastic grain -->
+<svg class="fixed inset-0 w-full h-full -z-10 pointer-events-none opacity-20" xmlns="http://www.w3.org/2000/svg">
+<filter id="noiseFilter">
+<feturbulence basefrequency="0.8" numoctaves="3" stitchtiles="stitch" type="fractalNoise"></feturbulence>
+<fecolormatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.45 0"></fecolormatrix>
+</filter>
+<rect filter="url(#noiseFilter)" height="100%" width="100%"></rect>
+</svg>
+<div class="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 w-full flex flex-col gap-28 py-10 lg:py-16">
+<!-- 1. HERO SECTION (Asymmetric 55/45 Split) -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-6 items-center pt-6 lg:pt-10 min-h-[640px]">
+<!-- Left Column: Copy & Strategic CTAs (55%) -->
+<div class="lg:col-span-6 flex flex-col items-start gap-8 z-10">
+<!-- Headline with Fraunces (font-light: 300) & exactly one italic word -->
+<div class="flex flex-col gap-4">
+<h1 class="font-headline font-light text-[48px] sm:text-[70px] lg:text-[82px] leading-[1.04] tracking-tight text-white text-glow-subtle">
+              Give any model <span class="italic font-normal">hands</span>.
+            </h1>
+<p class="font-body text-base sm:text-lg text-white/90 max-w-xl leading-relaxed text-glow-subtle font-normal">
+              Bring your own model. Get one API key. Free Point turns it into an agent that can ship pull requests, search your files, and read your inbox — with approval-gated writes that never touch main.
+            </p>
+</div>
+<!-- Buttons (Functional UI) -->
+<div class="flex flex-wrap items-center gap-4 w-full sm:w-auto pt-2">
+<!-- Primary CTA Button -->
+<a class="inline-flex items-center justify-center gap-2 bg-white text-neutral-950 font-semibold px-6 py-3 rounded-full hover:bg-white/90 transition-all text-sm shadow-lg" href="#invite-bay">
+<span>Enter invite code</span>
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</a>
+<!-- Secondary CTA Clear-Glass Pill -->
+<a class="inline-flex items-center gap-2 bg-white/[0.1] backdrop-blur-md border border-white/30 text-white font-medium px-6 py-3 rounded-full hover:bg-white/[0.18] transition-all text-sm shadow-sm" href="#dev-experience">
+<svg class="w-4 h-4 text-white/90" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M8 9l3 3-3 3m5 0h3M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span>Read API docs</span>
+</a>
+</div>
+</div>
+<!-- Right Column: Crisp Large Vector SVG Hero Diagram (45%) -->
+<div class="lg:col-span-6 relative flex items-center justify-center min-h-[500px] select-none">
+<svg class="w-full max-w-[760px] h-auto drop-shadow-2xl overflow-visible" fill="none" viewbox="0 0 760 520" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<!-- Vertical Caustic Beam Gradients -->
+<lineargradient id="beamGradient" x1="0%" x2="0%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#19C3C9" stop-opacity="0.9"></stop>
+<stop offset="35%" stop-color="#8A4DFF" stop-opacity="0.8"></stop>
+<stop offset="70%" stop-color="#FF4FB6" stop-opacity="0.8"></stop>
+<stop offset="100%" stop-color="#FF9A3D" stop-opacity="0.9"></stop>
+</lineargradient>
+<filter height="200%" id="softGlow" width="200%" x="-50%" y="-50%">
+<fegaussianblur in="SourceGraphic" stddeviation="6"></fegaussianblur>
+</filter>
+<filter height="140%" id="specularGlow" width="140%" x="-20%" y="-20%">
+<fedropshadow dx="0" dy="8" flood-color="#000000" flood-opacity="0.28" stddeviation="12"></fedropshadow>
+</filter>
+<!-- Disc 1: Teal Gradients -->
+<lineargradient id="discTealFill" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#19C3C9" stop-opacity="0.45"></stop>
+<stop offset="50%" stop-color="#ffffff" stop-opacity="0.22"></stop>
+<stop offset="100%" stop-color="#19C3C9" stop-opacity="0.3"></stop>
+</lineargradient>
+<lineargradient id="discTealStroke" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"></stop>
+<stop offset="50%" stop-color="#19C3C9" stop-opacity="0.4"></stop>
+<stop offset="100%" stop-color="#ffffff" stop-opacity="0.85"></stop>
+</lineargradient>
+<!-- Disc 2: Violet Gradients -->
+<lineargradient id="discVioletFill" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#8A4DFF" stop-opacity="0.45"></stop>
+<stop offset="50%" stop-color="#ffffff" stop-opacity="0.22"></stop>
+<stop offset="100%" stop-color="#8A4DFF" stop-opacity="0.3"></stop>
+</lineargradient>
+<lineargradient id="discVioletStroke" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"></stop>
+<stop offset="50%" stop-color="#8A4DFF" stop-opacity="0.4"></stop>
+<stop offset="100%" stop-color="#ffffff" stop-opacity="0.85"></stop>
+</lineargradient>
+<!-- Disc 3: Pink Gradients -->
+<lineargradient id="discPinkFill" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#FF4FB6" stop-opacity="0.45"></stop>
+<stop offset="50%" stop-color="#ffffff" stop-opacity="0.22"></stop>
+<stop offset="100%" stop-color="#FF4FB6" stop-opacity="0.3"></stop>
+</lineargradient>
+<lineargradient id="discPinkStroke" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"></stop>
+<stop offset="50%" stop-color="#FF4FB6" stop-opacity="0.4"></stop>
+<stop offset="100%" stop-color="#ffffff" stop-opacity="0.85"></stop>
+</lineargradient>
+<!-- Disc 4: Amber Gradients -->
+<lineargradient id="discAmberFill" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#FF9A3D" stop-opacity="0.45"></stop>
+<stop offset="50%" stop-color="#ffffff" stop-opacity="0.22"></stop>
+<stop offset="100%" stop-color="#FF9A3D" stop-opacity="0.3"></stop>
+</lineargradient>
+<lineargradient id="discAmberStroke" x1="0%" x2="100%" y1="0%" y2="100%">
+<stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"></stop>
+<stop offset="50%" stop-color="#FF9A3D" stop-opacity="0.4"></stop>
+<stop offset="100%" stop-color="#ffffff" stop-opacity="0.85"></stop>
+</lineargradient>
+</defs>
+<!-- Central Glowing Laser & Caustic Beam -->
+<line filter="url(#softGlow)" stroke="url(#beamGradient)" stroke-width="8" x1="280" x2="280" y1="40" y2="470"></line>
+<line stroke="#ffffff" stroke-opacity="0.9" stroke-width="2" x1="280" x2="280" y1="40" y2="470"></line>
+<!-- DISC 4: BOTTOM (Amber/Orange Tint) -->
+<g filter="url(#specularGlow)">
+<ellipse cx="280" cy="400" fill="url(#discAmberFill)" rx="190" ry="46" stroke="url(#discAmberStroke)" stroke-width="2"></ellipse>
+<ellipse cx="280" cy="397" fill="none" rx="160" ry="34" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.2"></ellipse>
+<!-- Center light ring -->
+<ellipse cx="280" cy="400" fill="#FF9A3D" fill-opacity="0.8" rx="18" ry="6"></ellipse>
+<circle cx="280" cy="400" fill="#ffffff" r="4"></circle>
+</g>
+<!-- Leader Line & Label 4 -->
+<g>
+<circle cx="280" cy="400" fill="#ffffff" r="3"></circle>
+<path d="M 400 408 L 470 424 L 515 424" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.2"></path>
+<circle cx="515" cy="424" fill="#FF9A3D" r="3"></circle>
+<text fill="#ffffff" font-family="Manrope, sans-serif" font-size="18" font-weight="600" x="526" y="420">Tools: GitHub, search, inbox, analyzer</text>
+<text fill="rgba(255,255,255,0.75)" font-family="Manrope, sans-serif" font-size="13" font-weight="400" x="526" y="438">Sandboxed execution with isolated runners</text>
+</g>
+<!-- DISC 3: (Hot Pink Tint) -->
+<g filter="url(#specularGlow)">
+<ellipse cx="280" cy="305" fill="url(#discPinkFill)" rx="190" ry="46" stroke="url(#discPinkStroke)" stroke-width="2"></ellipse>
+<ellipse cx="280" cy="302" fill="none" rx="160" ry="34" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.2"></ellipse>
+<!-- Center light ring -->
+<ellipse cx="280" cy="305" fill="#FF4FB6" fill-opacity="0.8" rx="18" ry="6"></ellipse>
+<circle cx="280" cy="305" fill="#ffffff" r="4"></circle>
+</g>
+<!-- Leader Line & Label 3 -->
+<g>
+<circle cx="280" cy="305" fill="#ffffff" r="3"></circle>
+<path d="M 400 313 L 470 326 L 515 326" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.2"></path>
+<circle cx="515" cy="326" fill="#FF4FB6" r="3"></circle>
+<text fill="#ffffff" font-family="Manrope, sans-serif" font-size="18" font-weight="600" x="526" y="322">Policy: approval-gated writes</text>
+<text fill="rgba(255,255,255,0.75)" font-family="Manrope, sans-serif" font-size="13" font-weight="400" x="526" y="340">Human sign-off required for destructive actions</text>
+</g>
+<!-- DISC 2: (Violet Tint) -->
+<g filter="url(#specularGlow)">
+<ellipse cx="280" cy="210" fill="url(#discVioletFill)" rx="190" ry="46" stroke="url(#discVioletStroke)" stroke-width="2"></ellipse>
+<ellipse cx="280" cy="207" fill="none" rx="160" ry="34" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.2"></ellipse>
+<!-- Center light ring -->
+<ellipse cx="280" cy="210" fill="#8A4DFF" fill-opacity="0.8" rx="18" ry="6"></ellipse>
+<circle cx="280" cy="210" fill="#ffffff" r="4"></circle>
+</g>
+<!-- Leader Line & Label 2 -->
+<g>
+<circle cx="280" cy="210" fill="#ffffff" r="3"></circle>
+<path d="M 400 218 L 470 228 L 515 228" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.2"></path>
+<circle cx="515" cy="228" fill="#8A4DFF" r="3"></circle>
+<text fill="#ffffff" font-family="Manrope, sans-serif" font-size="18" font-weight="600" x="526" y="224">Router: picks the tool</text>
+<text fill="rgba(255,255,255,0.75)" font-family="Manrope, sans-serif" font-size="13" font-weight="400" x="526" y="242">Low-latency schema and capability matcher</text>
+</g>
+<!-- DISC 1: TOP (Teal Tint) -->
+<g filter="url(#specularGlow)">
+<ellipse cx="280" cy="115" fill="url(#discTealFill)" rx="190" ry="46" stroke="url(#discTealStroke)" stroke-width="2"></ellipse>
+<ellipse cx="280" cy="112" fill="none" rx="160" ry="34" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.2"></ellipse>
+<!-- Center light ring -->
+<ellipse cx="280" cy="115" fill="#19C3C9" fill-opacity="0.8" rx="18" ry="6"></ellipse>
+<circle cx="280" cy="115" fill="#ffffff" r="4"></circle>
+</g>
+<!-- Leader Line & Label 1 -->
+<g>
+<circle cx="280" cy="115" fill="#ffffff" r="3"></circle>
+<path d="M 400 123 L 470 130 L 515 130" fill="none" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.2"></path>
+<circle cx="515" cy="130" fill="#19C3C9" r="3"></circle>
+<text fill="#ffffff" font-family="Manrope, sans-serif" font-size="18" font-weight="600" x="526" y="126">Model: bring your own weights</text>
+<text fill="rgba(255,255,255,0.75)" font-family="Manrope, sans-serif" font-size="13" font-weight="400" x="526" y="144">Connect any hosted endpoint or local node</text>
+</g>
+</svg>
+</div>
+</section>
+<!-- 2. SECTION: HOW IT WORKS (Direct Headline Start) -->
+<section class="flex flex-col gap-10">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-white/20 pb-6">
+<div>
+<h2 class="font-headline font-light text-3xl sm:text-4xl text-white tracking-tight text-glow-subtle">
+              Autonomous safely by <span class="italic font-normal">construction</span>.
+            </h2>
+</div>
+<p class="font-body text-sm text-white/80 max-w-sm">Every invocation is bound to an ephemeral, immutable Docker sandbox torn down immediately after PR verification.</p>
+</div>
+<!-- Horizontal 3-Step Sequence with Connecting Line -->
+<div class="relative grid grid-cols-1 md:grid-cols-3 gap-8">
+<!-- Connecting Track Line (Desktop) -->
+<div class="hidden md:block absolute top-7 left-12 right-12 h-[1px] bg-gradient-to-r from-white/40 via-white/10 to-white/40 -z-0"></div>
+<!-- Step 01 -->
+<div class="crystal-card p-6 rounded-2xl flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div class="w-12 h-12 rounded-xl bg-white/[0.12] border border-white/30 flex items-center justify-center font-body text-base font-semibold text-white">
+                01
+              </div>
+</div>
+<h3 class="font-headline font-normal text-xl text-white">Connect Model</h3>
+<p class="font-body text-sm text-white/80 leading-relaxed">
+              Plug in any OpenAI-compatible model, including Qwen3-1.7B and models you host yourself with zero prompt retraining or fine-tuning required.
+            </p>
+</div>
+<!-- Step 02 -->
+<div class="crystal-card p-6 rounded-2xl flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div class="w-12 h-12 rounded-xl bg-white/[0.12] border border-white/30 flex items-center justify-center font-body text-base font-semibold text-white">
+                02
+              </div>
+</div>
+<h3 class="font-headline font-normal text-xl text-white">Define Boundaries</h3>
+<p class="font-body text-sm text-white/80 leading-relaxed">
+              Granular sandboxing. Strict read-only workspace policies. Every outbound socket call is quarantined within sub-second Docker sandbox environments.
+            </p>
+</div>
+<!-- Step 03 -->
+<div class="crystal-card p-6 rounded-2xl flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div class="w-12 h-12 rounded-xl bg-white/[0.12] border border-white/30 flex items-center justify-center font-body text-base font-semibold text-white">
+                03
+              </div>
+</div>
+<h3 class="font-headline font-normal text-xl text-white">Hand Over the Keys</h3>
+<p class="font-body text-sm text-white/80 leading-relaxed">
+              Your model iterates workflows, drafts pull requests, verifies integration tests, and alerts Slack for human approval before release.
+            </p>
+</div>
+</div>
+</section>
+<!-- 3. SECTION: TOOLS (Bento Grid of Uneven Liquid Glass Tiles - Direct Headline Start) -->
+<section class="flex flex-col gap-8">
+<div class="flex flex-col gap-2">
+<h2 class="font-headline font-light text-3xl sm:text-4xl text-white tracking-tight text-glow-subtle">
+            The native toolkit for autonomous <span class="italic font-normal">engineers</span>.
+          </h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+<!-- Card 1 (Wide 8-col span): GITHUB PR ENGINE -->
+<div class="md:col-span-8 p-7 rounded-3xl crystal-card flex flex-col justify-between gap-6 group">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-white/[0.12] border border-white/30 flex items-center justify-center text-white">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><circle cx="18" cy="18" r="3"></circle><circle cx="6" cy="6" r="3"></circle><path d="M13 6h3a2 2 0 012 2v7M6 9v12" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<div>
+<h3 class="font-headline font-normal text-xl text-white">GitHub Pull Requests</h3>
+<span class="font-body text-xs text-white/70">tool::runtime.github.pr_v2</span>
+</div>
+</div>
+</div>
+<!-- Smoked Glass Terminal PR Diff Snippet -->
+<div class="rounded-xl smoked-terminal p-4 flex flex-col gap-3 font-mono text-[12px]">
+<div class="flex items-center justify-between border-b border-white/10 pb-2 text-white/70 text-[11px]">
+<div class="flex items-center gap-2">
+<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span class="text-white font-medium">acme/vector-core</span>
+<span class="px-2 py-0.5 rounded bg-white/10 text-white">feat/vector-caching-v2</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-white font-semibold">+148 lines</span>
+<span class="text-white/70">-32 lines</span>
+</div>
+</div>
+<div class="flex flex-col gap-1 text-[11px] leading-relaxed pt-1">
+<div class="flex gap-3 text-white/50">
+<span>042</span>
+<span class="text-white/70">- const cache = new InMemoryLRU({ ttl: 300 });</span>
+</div>
+<div class="flex gap-3 bg-white/15 text-white -mx-2 px-2 py-0.5 rounded">
+<span>042</span>
+<span>+ const cache = new DistributedVectorTier({ ttl: 3600, mmap: true });</span>
+</div>
+<div class="flex gap-3 bg-white/15 text-white -mx-2 px-2 py-0.5 rounded">
+<span>043</span>
+<span>+ await cache.warmupIndex({ shards: 'auto', evictionPolicy: 'lru-p99' });</span>
+</div>
+</div>
+</div>
+<!-- Actions Bar inside Diff -->
+<div class="flex flex-wrap items-center justify-between gap-4 pt-1">
+<div class="flex items-center gap-2">
+<svg class="w-4 h-4 text-white/80" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span class="font-body text-xs text-white/80">Sandboxed PR: Zero push access to protected branch.</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 rounded-full bg-white/[0.1] backdrop-blur-md border border-white/30 text-white font-medium text-xs hover:bg-white/[0.18] transition-colors">
+                  Inspect diff
+                </button>
+<button class="px-5 py-2 rounded-full bg-white text-neutral-950 font-semibold text-xs hover:bg-white/90 transition-all">
+                  Approve and merge
+                </button>
+</div>
+</div>
+</div>
+<!-- Card 2 (Tall 4-col span): DOCUMENT RETRIEVAL -->
+<div class="md:col-span-4 p-7 rounded-3xl crystal-card flex flex-col justify-between gap-6 group">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-white/[0.12] border border-white/30 flex items-center justify-center text-white">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.35-4.35" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<div>
+<h3 class="font-headline font-normal text-xl text-white">Deep Document Search</h3>
+<span class="font-body text-xs text-white/70">tool::rag.semantic_indexer</span>
+</div>
+</div>
+<!-- Search query mockup -->
+<div class="flex flex-col gap-3">
+<div class="p-3 rounded-xl bg-white/[0.06] border border-white/15 flex items-center gap-2">
+<svg class="w-3.5 h-3.5 text-white/70" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.35-4.35" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span class="font-body text-xs text-white/90 truncate">Encryption specifications across internal drives</span>
+</div>
+<div class="p-3.5 rounded-xl bg-white/[0.06] border border-white/15 flex flex-col gap-2">
+<span class="text-xs text-white/70">Google Drive Index</span>
+<p class="font-body text-xs text-white/90 leading-relaxed">
+                  Deep vector matching across connected Google Drive repositories and knowledge bases.
+                </p>
+</div>
+</div>
+<div class="text-white/70 text-xs border-t border-white/10 pt-3">
+<span>Semantic index active</span>
+</div>
+</div>
+<!-- Card 3 (Compact 6-col tile): GMAIL & MESSAGING -->
+<div class="md:col-span-6 p-7 rounded-3xl crystal-card flex flex-col justify-between gap-5 group">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-white/[0.12] border border-white/30 flex items-center justify-center text-white">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<div>
+<h3 class="font-headline font-normal text-xl text-white">Inbox Intelligence</h3>
+<span class="font-body text-xs text-white/70">tool::inbox.zero_mutation</span>
+</div>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-white/[0.06] border border-white/15 flex flex-col gap-2">
+<div class="flex items-center justify-between text-xs text-white/70">
+<span>Thread: v2.4 Release Notes Clarification</span>
+<span class="font-mono text-[10px]">Tokens: 820</span>
+</div>
+<p class="font-body text-xs text-white/90 leading-relaxed">
+                Drafted reply for lead architect. Outbound dispatch halted: awaiting cryptographic sign-off from human operator.
+              </p>
+</div>
+<div class="flex items-center gap-2 text-xs text-white/70">
+<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span>Zero SMTP outbound permissions without signature</span>
+</div>
+</div>
+<!-- Card 4 (Compact 6-col tile): CODE ANALYZER -->
+<div class="md:col-span-6 p-7 rounded-3xl crystal-card flex flex-col justify-between gap-5 group">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-white/[0.12] border border-white/30 flex items-center justify-center text-white">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<div>
+<h3 class="font-headline font-normal text-xl text-white">Static AST Code Inspector</h3>
+<span class="font-body text-xs text-white/70">tool::ast.vuln_scanner</span>
+</div>
+</div>
+</div>
+<div class="p-4 rounded-xl bg-white/[0.06] border border-white/15 flex flex-col gap-2">
+<div class="flex items-center justify-between text-xs">
+<span class="text-white">Security Vulnerability Assessment</span>
+<span class="text-white font-medium">Clean status</span>
+</div>
+<div class="w-full bg-white/15 h-1.5 rounded-full overflow-hidden">
+<div class="bg-white h-full w-[100%] rounded-full"></div>
+</div>
+<span class="font-body text-xs text-white/80">Pure static analysis. Executed in transient memory with zero file-system writing.</span>
+</div>
+<div class="flex items-center justify-between text-white/70 text-xs">
+<span>Parse depth: 16 layers</span>
+<span class="text-white font-medium">Verified Clean</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. SECTION: SECURITY ASSURANCE (4-Column Liquid Glass Strip) -->
+<section class="p-8 rounded-3xl crystal-card">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+<div class="flex flex-col gap-3">
+<div class="w-9 h-9 rounded-lg bg-white/[0.12] border border-white/30 flex items-center justify-center text-white">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<h4 class="font-headline font-normal text-base text-white">HTTPS Everywhere</h4>
+<p class="font-body text-xs text-white/80 leading-relaxed">
+              Mutual encryption enforced end-to-end between all agent socket brokers and LLM provider endpoints.
+            </p>
+</div>
+<div class="flex flex-col gap-3">
+<div class="w-9 h-9 rounded-lg bg-white/[0.12] border border-white/30 flex items-center justify-center text-white">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<h4 class="font-headline font-normal text-base text-white">Hashed API Keys</h4>
+<p class="font-body text-xs text-white/80 leading-relaxed">
+              Argon2id cryptographic salt and zero-knowledge enclave storage. Keys are never logged in plaintext.
+            </p>
+</div>
+<div class="flex flex-col gap-3">
+<div class="w-9 h-9 rounded-lg bg-white/[0.12] border border-white/30 flex items-center justify-center text-white">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<h4 class="font-headline font-normal text-base text-white">Approval-Gated Writes</h4>
+<p class="font-body text-xs text-white/80 leading-relaxed">
+              Hardware stops on all repository mutating events. Human signature tokens required before merging.
+            </p>
+</div>
+<div class="flex flex-col gap-3">
+<div class="w-9 h-9 rounded-lg bg-white/[0.12] border border-white/30 flex items-center justify-center text-white">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><rect height="16" rx="2" stroke-linecap="round" stroke-linejoin="round" width="16" x="4" y="4"></rect><path d="M9 9h6v6H9z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<h4 class="font-headline font-normal text-base text-white">Isolated Tenants</h4>
+<p class="font-body text-xs text-white/80 leading-relaxed">
+              Every tool run spins up its own transient Docker sandbox destroyed immediately upon completion.
+            </p>
+</div>
+</div>
+</section>
+<!-- 5. SECTION: DEVELOPER EXPERIENCE (Direct Headline Start) -->
+<section class="flex flex-col gap-8" id="dev-experience">
+<div>
+<h2 class="font-headline font-light text-3xl sm:text-4xl text-white tracking-tight text-glow-subtle">
+              One payload. Boundless agent <span class="italic font-normal">autonomy</span>.
+            </h2>
+</div>
+<!-- Split Layout: Code Snippet (Left) vs Live Streaming Console (Right) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+<!-- Left: API Request Smoked Terminal -->
+<div class="lg:col-span-6 rounded-2xl smoked-terminal flex flex-col">
+<!-- Terminal Tab Bar -->
+<div class="flex items-center justify-between px-4 py-3 bg-white/[0.06] border-b border-white/10">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded-full bg-white/30"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-white/30"></span>
+<span class="w-2.5 h-2.5 rounded-full bg-white/30"></span>
+<span class="font-mono text-[11px] text-white/70 ml-2">dispatch_agent.sh</span>
+</div>
+<div class="flex items-center gap-1 font-body text-[11px]">
+<button class="px-2.5 py-0.5 rounded-md bg-white/20 text-white font-medium">cURL</button>
+<button class="px-2.5 py-0.5 rounded-md text-white/60 hover:text-white cursor-pointer transition-colors">Python</button>
+<button class="px-2.5 py-0.5 rounded-md text-white/60 hover:text-white cursor-pointer transition-colors">TypeScript</button>
+</div>
+</div>
+<!-- Code View (Geist Mono strictly inside code) -->
+<div class="p-6 font-mono text-[12px] text-white/90 leading-relaxed overflow-x-auto flex-1">
+<pre><code><span class="text-white/40"># 1. Dispatch autonomous agent job</span>
+curl -X POST https://api.freepoint.dev/v1/jobs \
+  -H <span class="text-white">"Authorization: Bearer fp_live_89a...29c"</span> \
+  -H <span class="text-white">"Content-Type: application/json"</span> \
+  -d <span class="text-white/80">'{
+    "model": "qwen3-1.7b",
+    "action": "github.create_pr",
+    "repo": "acme/core-api",
+    "params": {
+      "issue_ref": 842,
+      "objective": "Implement LRU vector cache warmup",
+      "sandbox": "docker_isolated",
+      "require_human_signoff": true
+    }
+  }'</span></code></pre>
+</div>
+<div class="px-6 py-3 bg-white/[0.04] border-t border-white/10 flex items-center justify-between text-white/70 text-xs">
+<span>Payload Size: 418 bytes</span>
+<span class="text-white">HTTP/2 201 Created</span>
+</div>
+</div>
+<!-- Right: Live Streaming Job Console -->
+<div class="lg:col-span-6 rounded-2xl smoked-terminal flex flex-col">
+<div class="flex items-center justify-between px-4 py-3 bg-white/[0.06] border-b border-white/10">
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+<span class="font-body text-[12px] text-white font-semibold">Live SSE Telemetry</span>
+</div>
+<span class="font-mono text-[11px] text-white/70">
+                streaming
+              </span>
+</div>
+<!-- Real-Time Stream Terminal Feed -->
+<div class="p-5 font-mono text-[11px] flex flex-col gap-2.5 overflow-y-auto flex-1 leading-relaxed text-white/90">
+<div class="flex items-start gap-2.5">
+<span class="text-white/50">00:00.012</span>
+<svg class="w-3.5 h-3.5 text-white shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span class="text-white/80">Docker sandbox provisioned: tenant_sandbox_3918a</span>
+</div>
+<div class="flex items-start gap-2.5">
+<span class="text-white/50">00:00.180</span>
+<svg class="w-3.5 h-3.5 text-white shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span class="text-white/80">Cloned branch <span class="text-white">feat/vector-caching-v2</span> in scratchfs</span>
+</div>
+<div class="flex items-start gap-2.5">
+<span class="text-white/50">00:01.320</span>
+<svg class="w-3.5 h-3.5 text-white shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span class="text-white/80">qwen3-1.7b generated AST modifications (+148, -32 lines)</span>
+</div>
+<div class="flex items-start gap-2.5">
+<span class="text-white/50">00:02.108</span>
+<svg class="w-3.5 h-3.5 text-white shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span class="text-white/80">Integration test suite passed: 14/14 unit vectors green</span>
+</div>
+<div class="flex items-start gap-2.5 bg-white/[0.08] p-2.5 rounded-lg border border-white/20">
+<span class="text-white/50">00:02.410</span>
+<svg class="w-3.5 h-3.5 text-white shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<div class="flex flex-col">
+<span class="text-white font-semibold">Status: awaiting approval</span>
+<span class="text-white/80">PR URL: <span class="text-white underline">github.com/acme/core-api/pull/842</span></span>
+</div>
+</div>
+</div>
+<div class="p-3 bg-white/[0.04] border-t border-white/10 flex items-center justify-between text-white/70 text-xs">
+<span>Execution Duration: 2.41s</span>
+<span>Memory: 48MB / 512MB</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 6. SECTION: DASHBOARD CONSOLE PREVIEW & APPROVAL MODAL (Direct Headline Start) -->
+<section class="flex flex-col gap-8">
+<div class="flex flex-col gap-2">
+<h2 class="font-headline font-light text-3xl sm:text-4xl text-white tracking-tight text-glow-subtle">
+            The developer <span class="italic font-normal">cockpit</span> you won't outgrow.
+          </h2>
+</div>
+<!-- High Luxury Crystal Glass Console Container -->
+<div class="rounded-3xl crystal-card p-6 lg:p-8 flex flex-col gap-8">
+<!-- Header Strip: API Key Manager & Model Status -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 pb-6 border-b border-white/10">
+<!-- Key Mask -->
+<div class="flex flex-col gap-2">
+<span class="text-xs text-white/70">Active Production API Key</span>
+<div class="flex items-center justify-between bg-white/[0.06] px-3.5 py-2 rounded-xl border border-white/15">
+<span class="font-mono text-xs text-white tracking-wider">fp_live_89a••••••29c</span>
+<div class="flex items-center gap-2">
+<button class="text-white/70 hover:text-white" title="Copy Key">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</button>
+<button class="text-xs text-white/70 hover:text-white hover:underline">Revoke</button>
+</div>
+</div>
+</div>
+<!-- Usage Meter -->
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between text-xs">
+<span class="text-white/70">Monthly Sandbox Quota</span>
+<span class="text-white font-medium">68% • 6,802 / 10,000 runs</span>
+</div>
+<div class="w-full bg-white/15 h-2 rounded-full overflow-hidden p-[1px]">
+<div class="h-full rounded-full bg-gradient-to-r from-white via-white/80 to-white/50" style="width: 68%;"></div>
+</div>
+</div>
+<!-- Active Model Status -->
+<div class="flex flex-col gap-2">
+<span class="text-xs text-white/70">Connected Engine</span>
+<div class="flex items-center justify-between bg-white/[0.06] px-3.5 py-2 rounded-xl border border-white/15">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+<span class="text-xs text-white font-medium">qwen3-1.7b</span>
+</div>
+<span class="font-mono text-[11px] text-white/70">18ms latency</span>
+</div>
+</div>
+</div>
+<!-- Embedded Interactive Approval View -->
+<div class="rounded-2xl crystal-card p-6 flex flex-col gap-5">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-white/15 text-white flex items-center justify-center border border-white/30">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</div>
+<div>
+<h4 class="font-headline font-normal text-base text-white">Pending Mutation Sign-Off</h4>
+<p class="font-body text-xs text-white/70">Payload hash: <span class="font-mono text-white">8f4ae12dc089bb219</span></p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 rounded-full bg-white/[0.1] backdrop-blur-md border border-white/30 text-white text-xs font-medium hover:bg-white/[0.18] transition-colors">
+                  Reject run
+                </button>
+<button class="px-5 py-2 rounded-full bg-white text-neutral-950 text-xs font-semibold hover:bg-white/90 transition-all">
+                  Approve PR
+                </button>
+</div>
+</div>
+<!-- Jobs Table List -->
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left text-xs border-collapse">
+<thead>
+<tr class="text-white/70 border-b border-white/15">
+<th class="py-2.5 px-3 font-medium">Job ID</th>
+<th class="py-2.5 px-3 font-medium">Workflow intent</th>
+<th class="py-2.5 px-3 font-medium">Initiator</th>
+<th class="py-2.5 px-3 font-medium">State</th>
+<th class="py-2.5 px-3 text-right font-medium">Elapsed</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/10">
+<tr class="hover:bg-white/[0.04]">
+<td class="py-3 px-3 font-mono text-white">job_fp_8942a0</td>
+<td class="py-3 px-3 text-white">github.create_pr → feat/vector-caching-v2</td>
+<td class="py-3 px-3 text-white/70">model:qwen3-1.7b</td>
+<td class="py-3 px-3 text-white font-medium">
+Awaiting approval
+</td>
+<td class="py-3 px-3 text-right font-mono text-white/70">2.41s</td>
+</tr>
+<tr class="hover:bg-white/[0.04]">
+<td class="py-3 px-3 font-mono text-white/80">job_fp_7821bc</td>
+<td class="py-3 px-3 text-white">rag.semantic_indexer → notion_sync</td>
+<td class="py-3 px-3 text-white/70">cron:nightly</td>
+<td class="py-3 px-3 text-white/80 font-medium">
+Done
+</td>
+<td class="py-3 px-3 text-right font-mono text-white/70">14.8s</td>
+</tr>
+<tr class="hover:bg-white/[0.04]">
+<td class="py-3 px-3 font-mono text-white/80">job_fp_6210de</td>
+<td class="py-3 px-3 text-white">ast.vuln_scanner → audit_main_branch</td>
+<td class="py-3 px-3 text-white/70">user:architect</td>
+<td class="py-3 px-3 text-white/80 font-medium">
+Running
+</td>
+<td class="py-3 px-3 text-right font-mono text-white/70">0.82s</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</section>
+<!-- INVITE CODE SINK BAY (Direct Headline Start) -->
+<section class="relative p-10 lg:p-14 rounded-3xl crystal-card flex flex-col items-center text-center gap-6 overflow-hidden" id="invite-bay">
+<div class="absolute -top-32 left-1/2 -translate-x-1/2 w-96 h-96 rounded-full bg-gradient-to-b from-white/20 via-white/10 to-transparent blur-3xl pointer-events-none"></div>
+<h2 class="font-headline font-light text-3xl sm:text-4xl lg:text-5xl text-white tracking-tight max-w-2xl text-glow-subtle">
+          Ready to arm your models with verified runtime <span class="italic font-normal">agency</span>?
+        </h2>
+<p class="font-body text-sm sm:text-base text-white/90 max-w-lg leading-relaxed text-glow-subtle">
+          Free Point is rolling out in cohorts. Enter your invitation key or join the developer reserve list.
+        </p>
+<form class="flex flex-col sm:flex-row items-center gap-3 w-full max-w-md pt-2 z-10" onsubmit="event.preventDefault(); document.getElementById('token-resp').classList.remove('hidden');">
+<div class="relative w-full">
+<svg class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-white/60" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<input class="w-full pl-10 pr-4 py-3 rounded-full bg-white/[0.1] border border-white/25 focus:border-white focus:outline-none font-mono text-xs text-white placeholder-white/50 shadow-inner" placeholder="FP-INVITE-XXXX-XXXX" required="" type="text"/>
+</div>
+<button class="w-full sm:w-auto px-6 py-3 rounded-full bg-white hover:bg-white/90 text-neutral-950 font-semibold text-sm whitespace-nowrap transition-all shadow-md" type="submit">
+            Claim key
+          </button>
+</form>
+<div class="hidden font-mono text-xs text-white bg-white/15 px-4 py-2 rounded-full border border-white/30" id="token-resp">
+<div class="flex items-center gap-1.5">
+<svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" stroke-width="1.5" viewbox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+<span>Invocation verified. Welcome to Free Point alpha network.</span>
+</div>
+</div>
+</section>
+<!-- 7. GIANT WATERMARK & MINIMAL LUXURY FOOTER -->
+<div class="relative flex flex-col items-center gap-12 pt-12 pb-6 overflow-hidden">
+<!-- Giant glowing typography watermark at 8% opacity -->
+<div class="w-full flex justify-center pointer-events-none select-none">
+<span class="font-headline font-bold text-[72px] sm:text-[130px] lg:text-[180px] tracking-tighter text-white opacity-[0.08] leading-none whitespace-nowrap">
+            FREE POINT
+          </span>
+</div>
+<div class="w-full flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-white/15 pt-8 text-white/70 text-xs">
+<div class="flex items-center gap-6">
+<a class="hover:text-white transition-colors" href="#">Architecture</a>
+<a class="hover:text-white transition-colors" href="#">Changelog</a>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+<span class="text-white">All systems operational</span>
+</div>
+<a class="hover:text-white transition-colors" href="#">Security Whitepaper</a>
+</div>
+<div class="flex items-center gap-4">
+<a class="hover:text-white transition-colors" href="#">Twitter / X</a>
+<span>•</span>
+<a class="hover:text-white transition-colors" href="#">Discord Enclave</a>
+<span>•</span>
+<span>© 2025 Free Point Inc. Built for builders.</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<footer class="relative z-10 w-full bg-black/10 backdrop-blur-md border-t border-white/15 py-10">
+<div class="max-w-[1120px] mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-white/70 text-xs">
+<div class="flex items-center gap-3">
+<img alt="Free Point Monogram" class="h-5 w-auto opacity-80 object-contain" src="https://lh3.googleusercontent.com/aida/ALJJyrDnGX0m0hL9_zIv4JCuUVmCflZiZzKfJ4Royg4ASGtOQbeIUlsz3Yrlu1R_J_ycgOd34m-_3V_D7R5lLG7UxReZ6vyLvgGjIWZHNGNNBvVdZrxL6t8rcA9RGrsgbr50lAPpt7TMhr7UoMNLQldzj9RTFOpqGceCH9MGoyaNA044Sk-sXMD3b7m822cir99oP7kSZ4v6KapoEP4ChbUV6XOrlKiNymQa7wDOQebBGw"/>
+<span>© 2025 Free Point Runtime Architecture. All rights reserved.</span>
+</div>
+<div class="flex items-center gap-6">
+<a class="hover:text-white transition-colors" href="#">Security protocol</a>
+<a class="hover:text-white transition-colors" href="#">API spec</a>
+<span class="text-white font-mono">v2.4.0-liquid</span>
+</div>
+</div>
+</footer>
+</body></html>
