@@ -1,0 +1,56 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.17, pytest-9.2.0, pluggy-1.7.0 -- C:\Users\venka\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Free Point
+configfile: pytest.ini
+plugins: anyio-4.16.0, asyncio-1.5.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 19 items
+
+tests/test_web.py::test_security_headers_and_pages PASSED                [  5%]
+tests/test_web.py::test_hsts_only_behind_https PASSED                    [ 10%]
+tests/test_web.py::test_assets_served PASSED                             [ 15%]
+tests/test_web.py::test_csrf_required_on_web_routes PASSED               [ 21%]
+tests/test_web.py::test_usage_reports_real_key_counters PASSED           [ 26%]
+tests/test_web.py::test_secrets_never_returned_in_responses PASSED       [ 31%]
+tests/test_web.py::test_approval_list_detail_and_single_use PASSED       [ 36%]
+tests/test_web.py::test_approval_hash_mismatch_rejected PASSED           [ 42%]
+tests/test_web.py::test_approval_expiry_rejected PASSED                  [ 47%]
+tests/test_web.py::test_approval_bound_to_user PASSED                    [ 52%]
+tests/test_web.py::test_approvals_list_returns_documented_schema_and_filters_invalid_records PASSED [ 57%]
+tests/test_web.py::test_approvals_empty_state_payload PASSED             [ 63%]
+tests/test_web.py::test_approvals_schema_contract_and_no_missing_fields PASSED [ 68%]
+tests/test_web.py::test_save_then_list_shows_name_with_no_value PASSED   [ 73%]
+tests/test_web.py::test_failed_save_keeps_form_data PASSED               [ 78%]
+tests/test_web.py::test_delete_secret_removes_it PASSED                  [ 84%]
+tests/test_web.py::test_test_connection_errors_map_to_reason_classes PASSED [ 89%]
+tests/test_web.py::test_token_absent_from_responses_and_logs PASSED      [ 94%]
+tests/test_web.py::test_settings_ui_elements_and_js_contract PASSED      [100%]
+
+============================= 19 passed in 7.60s ==============================
+============================= test session starts =============================
+platform win32 -- Python 3.13.17, pytest-9.2.0, pluggy-1.7.0
+rootdir: C:\Free Point
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.16.0, asyncio-1.5.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 120 items
+
+tests\injection\test_prompt_injection.py ................                [ 13%]
+tests\test_agent_loop.py .......                                         [ 19%]
+tests\test_api.py ....                                                   [ 22%]
+tests\test_auth.py ..............                                        [ 34%]
+tests\test_dynamo_moto.py ...                                            [ 36%]
+tests\test_github_mcp.py ......                                          [ 41%]
+tests\test_gmail_mcp.py ........                                         [ 48%]
+tests\test_harness_mcp.py ......                                         [ 53%]
+tests\test_idempotency.py ..                                             [ 55%]
+tests\test_rae_mcp.py ...............                                    [ 67%]
+tests\test_rag_mcp.py ......                                             [ 72%]
+tests\test_ssrf.py .......                                               [ 78%]
+tests\test_state.py ...                                                  [ 80%]
+tests\test_tools.py ....                                                 [ 84%]
+tests\test_web.py ...................                                    [100%]
+
+============================ 120 passed in 14.97s =============================

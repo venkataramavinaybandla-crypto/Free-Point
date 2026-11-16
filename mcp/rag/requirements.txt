@@ -1,0 +1,6 @@
+mcp==1.30.0
+fastembed==0.9.1
+faiss-cpu==1.11.0
+numpy==2.2.6
+boto3==1.44.3
+uvicorn==0.54.0

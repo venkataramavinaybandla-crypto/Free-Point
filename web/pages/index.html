@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Free Point — hands for any model</title>
+  <meta name="description" content="Free Point is an agent harness as a service: bring an OpenAI-compatible model, get one API key, and expose guarded tools through MCP.">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script type="module" src="/static/js/landing.js"></script>
+</head>
+<body>
+  <div class="spectrum" aria-hidden="true"></div>
+  <svg class="noise" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <filter id="noiseFilter">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"></feTurbulence>
+      <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.45 0"></feColorMatrix>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#noiseFilter)"></rect>
+  </svg>
+
+  <header id="site-nav" class="site-nav"></header>
+
+  <main class="page">
+    <div class="container stack">
+
+      <section class="hero">
+        <div class="hero-copy">
+          <h1 class="display">Give any model <em>hands</em>.</h1>
+          <p class="lede">
+            Bring your own OpenAI-compatible model. Get one API key. Free Point wraps it in a harness with
+            declared tools, hard limits, and approval-gated GitHub writes that never touch main.
+          </p>
+          <div class="btn-row">
+            <a class="btn btn-primary" href="/signup">Create account</a>
+            <a class="btn btn-ghost" href="/docs">Read API docs</a>
+          </div>
+        </div>
+
+        <div class="hero-art" aria-hidden="true">
+          <svg viewBox="0 0 760 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="beamGradient" x1="0%" x2="0%" y1="0%" y2="100%">
+                <stop offset="0%" stop-color="#19C3C9" stop-opacity="0.9"></stop>
+                <stop offset="35%" stop-color="#8A4DFF" stop-opacity="0.8"></stop>
+                <stop offset="70%" stop-color="#FF4FB6" stop-opacity="0.8"></stop>
+                <stop offset="100%" stop-color="#FF9A3D" stop-opacity="0.9"></stop>
+              </linearGradient>
+              <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="6"></feGaussianBlur>
+              </filter>
+              <filter id="specularGlow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.28"></feDropShadow>
+              </filter>
+              <linearGradient id="discTealFill" x1="0%" x2="100%" y1="0%" y2="100%">
+                <stop offset="0%" stop-color="#19C3C9" stop-opacity="0.45"></stop>
+                <stop offset="50%" stop-color="#ffffff" stop-opacity="0.22"></stop>
+                <stop offset="100%" stop-color="#19C3C9" stop-opacity="0.3"></stop>
+              </linearGradient>
+              <linearGradient id="discTealStroke" x1="0%" x2="100%" y1="0%" y2="100%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"></stop>
+                <stop offset="50%" stop-color="#19C3C9" stop-opacity="0.4"></stop>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85"></stop>
+              </linearGradient>
+              <linearGradient id="discVioletFill" x1="0%" x2="100%" y1="0%" y2="100%">
+                <stop offset="0%" stop-color="#8A4DFF" stop-opacity="0.45"></stop>
+                <stop offset="50%" stop-color="#ffffff" stop-opacity="0.22"></stop>
+                <stop offset="100%" stop-color="#8A4DFF" stop-opacity="0.3"></stop>
+              </linearGradient>
+              <linearGradient id="discVioletStroke" x1="0%" x2="100%" y1="0%" y2="100%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"></stop>
+                <stop offset="50%" stop-color="#8A4DFF" stop-opacity="0.4"></stop>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85"></stop>
+              </linearGradient>
+              <linearGradient id="discPinkFill" x1="0%" x2="100%" y1="0%" y2="100%">
+                <stop offset="0%" stop-color="#FF4FB6" stop-opacity="0.45"></stop>
+                <stop offset="50%" stop-color="#ffffff" stop-opacity="0.22"></stop>
+                <stop offset="100%" stop-color="#FF4FB6" stop-opacity="0.3"></stop>
+              </linearGradient>
+              <linearGradient id="discPinkStroke" x1="0%" x2="100%" y1="0%" y2="100%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"></stop>
+                <stop offset="50%" stop-color="#FF4FB6" stop-opacity="0.4"></stop>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85"></stop>
+              </linearGradient>
+              <linearGradient id="discAmberFill" x1="0%" x2="100%" y1="0%" y2="100%">
+                <stop offset="0%" stop-color="#FF9A3D" stop-opacity="0.45"></stop>
+                <stop offset="50%" stop-color="#ffffff" stop-opacity="0.22"></stop>
+                <stop offset="100%" stop-color="#FF9A3D" stop-opacity="0.3"></stop>
+              </linearGradient>
+              <linearGradient id="discAmberStroke" x1="0%" x2="100%" y1="0%" y2="100%">
+                <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"></stop>
+                <stop offset="50%" stop-color="#FF9A3D" stop-opacity="0.4"></stop>
+                <stop offset="100%" stop-color="#ffffff" stop-opacity="0.85"></stop>
+              </linearGradient>
+            </defs>
+
+            <line x1="280" x2="280" y1="40" y2="470" stroke="url(#beamGradient)" stroke-width="8" filter="url(#softGlow)"></line>
+            <line x1="280" x2="280" y1="40" y2="470" stroke="#ffffff" stroke-opacity="0.9" stroke-width="2"></line>
+
+            <g filter="url(#specularGlow)">
+              <ellipse cx="280" cy="400" rx="190" ry="46" fill="url(#discAmberFill)" stroke="url(#discAmberStroke)" stroke-width="2"></ellipse>
+              <ellipse cx="280" cy="397" rx="160" ry="34" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.2"></ellipse>
+              <ellipse cx="280" cy="400" rx="18" ry="6" fill="#FF9A3D" fill-opacity="0.8"></ellipse>
+              <circle cx="280" cy="400" r="4" fill="#ffffff"></circle>
+            </g>
+            <g>
+              <circle cx="280" cy="400" r="3" fill="#ffffff"></circle>
+              <path d="M 400 408 L 470 424 L 515 424" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.2"></path>
+              <circle cx="515" cy="424" r="3" fill="#FF9A3D"></circle>
+              <text x="526" y="420" fill="#ffffff" font-family="Manrope, sans-serif" font-size="17" font-weight="600">Tools: GitHub, search, inbox</text>
+              <text x="526" y="438" fill="rgba(255,255,255,0.75)" font-family="Manrope, sans-serif" font-size="12.5">Only the RAE parser runs in a no-network sandbox</text>
+            </g>
+
+            <g filter="url(#specularGlow)">
+              <ellipse cx="280" cy="305" rx="190" ry="46" fill="url(#discPinkFill)" stroke="url(#discPinkStroke)" stroke-width="2"></ellipse>
+              <ellipse cx="280" cy="302" rx="160" ry="34" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.2"></ellipse>
+              <ellipse cx="280" cy="305" rx="18" ry="6" fill="#FF4FB6" fill-opacity="0.8"></ellipse>
+              <circle cx="280" cy="305" r="4" fill="#ffffff"></circle>
+            </g>
+            <g>
+              <circle cx="280" cy="305" r="3" fill="#ffffff"></circle>
+              <path d="M 400 313 L 470 326 L 515 326" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.2"></path>
+              <circle cx="515" cy="326" r="3" fill="#FF4FB6"></circle>
+              <text x="526" y="322" fill="#ffffff" font-family="Manrope, sans-serif" font-size="17" font-weight="600">Policy: approval-gated writes</text>
+              <text x="526" y="340" fill="rgba(255,255,255,0.75)" font-family="Manrope, sans-serif" font-size="12.5">A single-use approval bound to the PR content hash</text>
+            </g>
+
+            <g filter="url(#specularGlow)">
+              <ellipse cx="280" cy="210" rx="190" ry="46" fill="url(#discVioletFill)" stroke="url(#discVioletStroke)" stroke-width="2"></ellipse>
+              <ellipse cx="280" cy="207" rx="160" ry="34" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.2"></ellipse>
+              <ellipse cx="280" cy="210" rx="18" ry="6" fill="#8A4DFF" fill-opacity="0.8"></ellipse>
+              <circle cx="280" cy="210" r="4" fill="#ffffff"></circle>
+            </g>
+            <g>
+              <circle cx="280" cy="210" r="3" fill="#ffffff"></circle>
+              <path d="M 400 218 L 470 228 L 515 228" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.2"></path>
+              <circle cx="515" cy="228" r="3" fill="#8A4DFF"></circle>
+              <text x="526" y="224" fill="#ffffff" font-family="Manrope, sans-serif" font-size="17" font-weight="600">Router: declared tools only</text>
+              <text x="526" y="242" fill="rgba(255,255,255,0.75)" font-family="Manrope, sans-serif" font-size="12.5">Each job lists its tools; code validates every call</text>
+            </g>
+
+            <g filter="url(#specularGlow)">
+              <ellipse cx="280" cy="115" rx="190" ry="46" fill="url(#discTealFill)" stroke="url(#discTealStroke)" stroke-width="2"></ellipse>
+              <ellipse cx="280" cy="112" rx="160" ry="34" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1.2"></ellipse>
+              <ellipse cx="280" cy="115" rx="18" ry="6" fill="#19C3C9" fill-opacity="0.8"></ellipse>
+              <circle cx="280" cy="115" r="4" fill="#ffffff"></circle>
+            </g>
+            <g>
+              <circle cx="280" cy="115" r="3" fill="#ffffff"></circle>
+              <path d="M 400 123 L 470 130 L 515 130" stroke="#ffffff" stroke-opacity="0.6" stroke-width="1.2"></path>
+              <circle cx="515" cy="130" r="3" fill="#19C3C9"></circle>
+              <text x="526" y="126" fill="#ffffff" font-family="Manrope, sans-serif" font-size="17" font-weight="600">Model: bring your own weights</text>
+              <text x="526" y="144" fill="rgba(255,255,255,0.75)" font-family="Manrope, sans-serif" font-size="12.5">Any OpenAI-compatible endpoint over HTTPS</text>
+            </g>
+          </svg>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2 class="section-title">Autonomous safely by <em>construction</em>.</h2>
+          <p class="section-note">
+            Policy lives in code. Every GitHub write waits for a human, and the RAE analyzer never leaves its
+            network-isolated parser.
+          </p>
+        </div>
+        <div class="steps">
+          <article class="step glass">
+            <div class="step-num">01</div>
+            <h3>Connect Model</h3>
+            <p>
+              Point the harness at any OpenAI-compatible endpoint. Your model URL is SSRF-checked when saved
+              and re-validated on every job.
+            </p>
+          </article>
+          <article class="step glass">
+            <div class="step-num">02</div>
+            <h3>Define Boundaries</h3>
+            <p>
+              Declare the tools for each job. Tool output is treated as untrusted data, tool calls are
+              schema-checked, and jobs stop at a wall-clock limit.
+            </p>
+          </article>
+          <article class="step glass">
+            <div class="step-num">03</div>
+            <h3>Hand Over the Keys</h3>
+            <p>
+              Your model can draft a pull request on a branch. Nothing merges, and the worker only executes
+              after a human approves the exact diff.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2 class="section-title">The native toolkit for autonomous <em>engineers</em>.</h2>
+        </div>
+        <div class="bento">
+          <article class="tile tile-wide glass">
+            <div class="tile-head">
+              <div class="icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <circle cx="18" cy="18" r="3"></circle>
+                  <circle cx="6" cy="6" r="3"></circle>
+                  <path d="M13 6h3a2 2 0 012 2v7M6 9v12"></path>
+                </svg>
+              </div>
+              <div>
+                <h3>GitHub Pull Requests</h3>
+                <span class="tool-name">mcp/github</span>
+              </div>
+            </div>
+            <div class="terminal">
+              <div class="terminal-bar">
+                <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+                <span class="chip">Example diff</span>
+              </div>
+              <div class="tile-body">
+                <div class="tile-foot">
+                  <span class="mono">acme/vector-core</span>
+                  <span class="chip">feat/vector-caching</span>
+                </div>
+                <div class="diff-line del"><span class="ln">042</span><span>- const cache = new InMemoryLRU({ ttl: 300 });</span></div>
+                <div class="diff-line add"><span class="ln">042</span><span>+ const cache = new DistributedVectorTier({ ttl: 3600, mmap: true });</span></div>
+                <div class="diff-line add"><span class="ln">043</span><span>+ await cache.warmupIndex({ shards: "auto" });</span></div>
+              </div>
+            </div>
+            <div class="tile-foot">
+              <span>Draft PRs only. No push access to protected branches.</span>
+              <a class="btn btn-ghost btn-small" href="/approvals">Review approvals</a>
+            </div>
+          </article>
+
+          <article class="tile tile-tall glass">
+            <div class="tile-head">
+              <div class="icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <path d="M21 21l-4.35-4.35"></path>
+                </svg>
+              </div>
+              <div>
+                <h3>Deep Document Search</h3>
+                <span class="tool-name">mcp/rag</span>
+              </div>
+            </div>
+            <div class="tile-body">
+              <span class="eyebrow">Per-user index</span>
+              <p>
+                fastembed vectors in a FAISS index owned by one user. Index versions live in S3 and the
+                active pointer moves with a conditional write.
+              </p>
+            </div>
+            <div class="tile-foot">Your documents stay in your tenant.</div>
+          </article>
+
+          <article class="tile tile-half glass">
+            <div class="tile-head">
+              <div class="icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                </svg>
+              </div>
+              <div>
+                <h3>Inbox Intelligence</h3>
+                <span class="tool-name">mcp/gmail</span>
+              </div>
+            </div>
+            <p>
+              Read-only Gmail summaries: two lines per message, no write scopes, no SMTP path out of the
+              harness.
+            </p>
+            <div class="tile-foot">Read-only by design.</div>
+          </article>
+
+          <article class="tile tile-half glass">
+            <div class="tile-head">
+              <div class="icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                  <path d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                </svg>
+              </div>
+              <div>
+                <h3>Static Code Inspector</h3>
+                <span class="tool-name">mcp/rae</span>
+              </div>
+            </div>
+            <p>
+              Static analysis of binaries and repositories. Samples are never executed; the parser runs in a
+              no-network, read-only container.
+            </p>
+            <div class="tile-foot">
+              <span class="badge badge-ok">No network</span>
+              <span>First feature cut if time runs out.</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="security-strip glass">
+        <div class="security-item">
+          <div class="icon-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+            </svg>
+          </div>
+          <h4>HTTPS &amp; SSRF guards</h4>
+          <p>Model URLs must be HTTPS. Every connection resolves, checks each IP, pins the peer and follows no redirects.</p>
+        </div>
+        <div class="security-item">
+          <div class="icon-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <path d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+            </svg>
+          </div>
+          <h4>Hashed API keys</h4>
+          <p>Keys are shown once, stored as SHA-256 hashes with a public prefix. Passwords use Argon2id.</p>
+        </div>
+        <div class="security-item">
+          <div class="icon-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <h4>Approval-gated writes</h4>
+          <p>Single-use, expiring approvals bound to hash(user, job, repo, base, head, title, body, diff).</p>
+        </div>
+        <div class="security-item">
+          <div class="icon-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+              <path d="M9 9h6v6H9z"></path>
+            </svg>
+          </div>
+          <h4>Tenant isolation</h4>
+          <p>Tenant ids in every storage key and per-user indexes. Only the RAE parser runs network-isolated.</p>
+        </div>
+      </section>
+
+      <section id="dev-experience">
+        <div class="section-head">
+          <h2 class="section-title">One payload. Every tool behind a <em>policy</em>.</h2>
+        </div>
+        <div class="dev-grid">
+          <div class="terminal">
+            <div class="terminal-bar">
+              <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+              <span class="chip">Example request</span>
+            </div>
+            <pre class="code-block"><code><span class="comment"># Queue an agent job</span>
+curl -X POST https://your-host/v1/jobs \
+  -H <span class="str">"Authorization: Bearer fp_&lt;prefix&gt;_&lt;secret&gt;"</span> \
+  -H <span class="str">"Idempotency-Key: &lt;unique-key&gt;"</span> \
+  -d <span class="str">'{
+    "task": "Draft a pull request for issue 842",
+    "tools": ["github"]
+  }'</span></code></pre>
+            <div class="terminal-foot">
+              <span>Replace the host and key with your own.</span>
+              <a href="/docs">Full schema in /docs</a>
+            </div>
+          </div>
+
+          <div class="terminal">
+            <div class="terminal-bar">
+              <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+              <span><span class="chip">Example log</span></span>
+            </div>
+            <div class="log-feed">
+              <div class="log-row"><span class="ts">00:00.000</span><span class="ok">✓</span><span>job accepted; state QUEUED</span></div>
+              <div class="log-row"><span class="ts">00:00.180</span><span class="ok">✓</span><span>declared tools: github</span></div>
+              <div class="log-row"><span class="ts">00:01.320</span><span class="ok">✓</span><span>model response validated against the JSON schema</span></div>
+              <div class="log-row"><span class="ts">00:02.108</span><span class="ok">✓</span><span>GitHub write staged as a draft artifact</span></div>
+              <div class="log-row alert"><span class="ts">00:02.410</span><span class="ok">!</span><span>state AWAITING_APPROVAL; worker exits</span></div>
+            </div>
+            <div class="terminal-foot">
+              <span>Example output.</span>
+              <span>Live jobs return JSON from /v1/jobs/{id}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2 class="section-title">The developer <em>cockpit</em> you won't outgrow.</h2>
+        </div>
+        <div class="cockpit glass">
+          <div class="cockpit-head">
+            <div class="cockpit-cell">
+              <span class="eyebrow">API keys</span>
+              <div class="value"><span>prefix · created · last used</span></div>
+            </div>
+            <div class="cockpit-cell">
+              <span class="eyebrow">Usage</span>
+              <div class="value"><span>rate limit and daily quota per key</span></div>
+            </div>
+            <div class="cockpit-cell">
+              <span class="eyebrow">Model endpoint</span>
+              <div class="value"><span>URL and token stored encrypted</span></div>
+            </div>
+          </div>
+          <div class="feature-grid">
+            <div class="feature">
+              <h4>Keys under control</h4>
+              <p>Create, rotate and revoke keys. The full secret is shown once, in memory, and never stored in the browser.</p>
+            </div>
+            <div class="feature">
+              <h4>Approvals with the exact diff</h4>
+              <p>Open a pending request, read the PR payload and payload hash, then approve or reject. Each approval works once.</p>
+            </div>
+            <div class="feature">
+              <h4>Test before a job</h4>
+              <p>Save a model URL and token, then test the endpoint through the same SSRF-guarded client the harness uses.</p>
+            </div>
+          </div>
+          <div class="tile-foot">
+            <span>Live numbers come from your account, never from a mock.</span>
+            <span class="btn-row">
+              <a class="btn btn-ghost btn-small" href="/settings">Open settings</a>
+              <a class="btn btn-primary btn-small" href="/dashboard">Open dashboard</a>
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta glass" id="cta-bay">
+        <h2 class="section-title">Ready to arm your models with approval-gated <em>hands</em>?</h2>
+        <p class="lede small">
+          Free Point is open for signup. Create an account with your email and password, then connect an
+          OpenAI-compatible endpoint.
+        </p>
+        <div class="btn-row">
+          <a class="btn btn-primary" href="/signup">Create account</a>
+          <a class="btn btn-ghost" href="/docs">Read API docs</a>
+        </div>
+      </section>
+
+      <div>
+        <div class="watermark" aria-hidden="true"><span>FREE POINT</span></div>
+        <footer class="site-footer">
+          <div class="btn-row">
+            <span>© 2026 Free Point. Student project for 25CS2206E.</span>
+          </div>
+          <nav aria-label="Footer">
+            <a href="/docs">API docs</a>
+            <a href="/approvals">Approvals</a>
+            <a href="/health">Health check</a>
+            <span class="mono">v0.1.0</span>
+          </nav>
+        </footer>
+      </div>
+
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,51 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.17, pytest-9.2.0, pluggy-1.7.0 -- C:\Users\venka\AppData\Local\Programs\Python\Python313\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Free Point
+configfile: pytest.ini
+plugins: anyio-4.16.0, asyncio-1.5.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collecting ... collected 14 items
+
+tests/test_auth.py::test_signup_works_with_email_and_password_only PASSED [  7%]
+tests/test_auth.py::test_signup_invite_field_ignored PASSED              [ 14%]
+tests/test_auth.py::test_signup_enumeration_safe_errors PASSED           [ 21%]
+tests/test_auth.py::test_no_route_or_page_references_invite_at_runtime PASSED [ 28%]
+tests/test_auth.py::test_global_cap_returns_503_and_resets_on_new_utc_day PASSED [ 35%]
+tests/test_auth.py::test_signup_login_logout_flow_and_cookie_flags PASSED [ 42%]
+tests/test_auth.py::test_csrf_double_submit_protection PASSED            [ 50%]
+tests/test_auth.py::test_api_keys_lifecycle_and_show_once PASSED         [ 57%]
+tests/test_auth.py::test_wrong_key_and_revoked_key_401 PASSED            [ 64%]
+tests/test_auth.py::test_route_isolation_keys_never_work_on_session_routes_and_vice_versa PASSED [ 71%]
+tests/test_auth.py::test_rate_limiting_and_quota_headers PASSED          [ 78%]
+tests/test_auth.py::test_idempotency_key_conflict_422 PASSED             [ 85%]
+tests/test_auth.py::test_envelope_encryption_roundtrip_and_context_mismatch PASSED [ 92%]
+tests/test_auth.py::test_secret_never_present_in_logs_or_get_responses PASSED [100%]
+
+============================= 14 passed in 6.14s ==============================
+============================= test session starts =============================
+platform win32 -- Python 3.13.17, pytest-9.2.0, pluggy-1.7.0
+rootdir: C:\Free Point
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.16.0, asyncio-1.5.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 111 items
+
+tests\injection\test_prompt_injection.py ................                [ 14%]
+tests\test_agent_loop.py .......                                         [ 20%]
+tests\test_api.py ....                                                   [ 24%]
+tests\test_auth.py ..............                                        [ 36%]
+tests\test_dynamo_moto.py ...                                            [ 39%]
+tests\test_github_mcp.py ......                                          [ 45%]
+tests\test_gmail_mcp.py ........                                         [ 52%]
+tests\test_harness_mcp.py ......                                         [ 57%]
+tests\test_idempotency.py ..                                             [ 59%]
+tests\test_rae_mcp.py ...............                                    [ 72%]
+tests\test_rag_mcp.py ......                                             [ 78%]
+tests\test_ssrf.py .......                                               [ 84%]
+tests\test_state.py ...                                                  [ 87%]
+tests\test_tools.py ....                                                 [ 90%]
+tests\test_web.py ..........                                             [100%]
+
+============================ 111 passed in 17.61s =============================

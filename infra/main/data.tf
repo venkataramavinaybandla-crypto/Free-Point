@@ -145,6 +145,63 @@ resource "aws_dynamodb_table" "usage_counters" {
   }
 }
 
+resource "aws_dynamodb_table" "global_job_counters" {
+  name         = "free-point-global_job_counters"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
+  }
+
+  tags = {
+    Name = "free-point-global_job_counters"
+  }
+}
+
+resource "aws_dynamodb_table" "approvals" {
+  name         = "free-point-approvals"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "created_at"
+    type = "N"
+  }
+
+  global_secondary_index {
+    name            = "user_id-index"
+    hash_key        = "user_id"
+    range_key       = "created_at"
+    projection_type = "ALL"
+  }
+
+  ttl {
+    attribute_name = "expires_at"
+    enabled        = true
+  }
+
+  tags = {
+    Name = "free-point-approvals"
+  }
+}
+
 resource "aws_dynamodb_table" "user_secrets" {
   name         = "free-point-user_secrets"
   billing_mode = "PAY_PER_REQUEST"

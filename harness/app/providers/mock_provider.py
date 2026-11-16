@@ -36,24 +36,33 @@ class MockLLMProvider(LLMProvider):
         messages: List[Dict[str, str]],
         json_schema: Optional[Dict[str, Any]] = None,
         max_tokens: int = 1024,
+        temperature: float = 0.0,
     ) -> LLMResponse:
         if self.latency_seconds > 0:
             await asyncio.sleep(self.latency_seconds)
 
         if self.scripted_responses:
-            content = self.scripted_responses.pop(0)
+            next_resp = self.scripted_responses.pop(0)
+            if isinstance(next_resp, dict):
+                content = json.dumps(next_resp)
+            else:
+                content = str(next_resp)
             return LLMResponse(content=content)
 
         last_message = messages[-1]["content"] if messages else ""
-        has_tool_output = any("Tool output:" in m.get("content", "") for m in messages)
+        has_tool_output = any(
+            "Tool output:" in m.get("content", "") or "<untrusted_tool_output" in m.get("content", "")
+            for m in messages
+        )
 
         if has_tool_output:
             return LLMResponse(
                 content=json.dumps(
                     {
-                        "thought": "Tool output consumed, completing execution.",
-                        "action": "finish",
-                        "final_response": "Execution completed successfully.",
+                        "action": "final",
+                        "tool_name": "",
+                        "arguments": {},
+                        "final_answer": "Execution completed successfully.",
                     }
                 )
             )
@@ -62,10 +71,21 @@ class MockLLMProvider(LLMProvider):
             return LLMResponse(
                 content=json.dumps(
                     {
-                        "thought": "Invoking utc_time tool.",
                         "action": "call_tool",
                         "tool_name": "utc_time",
-                        "tool_args": {},
+                        "arguments": {},
+                        "final_answer": "",
+                    }
+                )
+            )
+        elif "readme" in last_message.lower():
+            return LLMResponse(
+                content=json.dumps(
+                    {
+                        "action": "call_tool",
+                        "tool_name": "github_read_file",
+                        "arguments": {"repo": "smoke/example", "path": "README.md"},
+                        "final_answer": "",
                     }
                 )
             )
@@ -73,10 +93,10 @@ class MockLLMProvider(LLMProvider):
             return LLMResponse(
                 content=json.dumps(
                     {
-                        "thought": "Invoking echo tool.",
                         "action": "call_tool",
                         "tool_name": "echo",
-                        "tool_args": {"message": "hello world"},
+                        "arguments": {"message": "hello world"},
+                        "final_answer": "",
                     }
                 )
             )
@@ -84,15 +104,15 @@ class MockLLMProvider(LLMProvider):
             return LLMResponse(
                 content=json.dumps(
                     {
-                        "thought": "Creating PR artifact requiring human approval.",
                         "action": "call_tool",
                         "tool_name": "create_draft_pr",
-                        "tool_args": {
+                        "arguments": {
                             "repo": "test/repo",
                             "title": "feat: test",
                             "body": "PR description",
                             "diff": "+line",
                         },
+                        "final_answer": "",
                     }
                 )
             )
@@ -100,9 +120,10 @@ class MockLLMProvider(LLMProvider):
         return LLMResponse(
             content=json.dumps(
                 {
-                    "thought": "Direct final response.",
-                    "action": "finish",
-                    "final_response": f"Processed task: {last_message}",
+                    "action": "final",
+                    "tool_name": "",
+                    "arguments": {},
+                    "final_answer": f"Processed task: {last_message}",
                 }
             )
         )

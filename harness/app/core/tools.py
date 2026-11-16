@@ -8,6 +8,25 @@ from typing import Any, Dict, Literal, Optional
 
 from pydantic import BaseModel
 
+TOOL_GROUPS: Dict[str, frozenset[str]] = {
+    "github": frozenset({"github_list_files", "github_read_file", "create_draft_pr"}),
+    "rag": frozenset({"rag_ingest_text", "rag_query"}),
+    "gmail": frozenset({"gmail_list_recent", "gmail_summarize_email"}),
+    "rae": frozenset({"rae_analyze_binary", "rae_analyze_repo", "rae_get_chunk"}),
+}
+
+
+def is_tool_declared(tool_name: str, declared_tools: list[str]) -> bool:
+    """A tool is authorized by its name or by a declared server group."""
+    if tool_name in declared_tools:
+        return True
+    return any(tool_name in TOOL_GROUPS.get(group, frozenset()) for group in declared_tools)
+
+
+def unavailable_declared_tools(declared_tools: list[str], available: set[str]) -> list[str]:
+    """Return declarations that name neither an available tool nor a group."""
+    return [name for name in declared_tools if name not in available and name not in TOOL_GROUPS]
+
 
 class ToolArtifact(BaseModel):
     artifact_id: str
@@ -22,6 +41,7 @@ class Tool(ABC):
     description: str
     schema: Dict[str, Any]
     side_effect: Literal["read", "write"]
+    requires_approval: bool = False
 
     @abstractmethod
     async def run(self, **kwargs: Any) -> Any:
@@ -36,6 +56,7 @@ class EchoTool(Tool):
         "type": "object",
         "properties": {"message": {"type": "string", "description": "The message to echo"}},
         "required": ["message"],
+        "additionalProperties": False,
     }
 
     async def run(self, message: str = "", **kwargs: Any) -> Dict[str, Any]:
@@ -49,6 +70,7 @@ class UtcTimeTool(Tool):
     schema = {
         "type": "object",
         "properties": {},
+        "additionalProperties": False,
     }
 
     async def run(self, **kwargs: Any) -> Dict[str, Any]:
@@ -61,6 +83,7 @@ class DemoWriteTool(Tool):
     name = "create_draft_pr"
     description = "Prepares a draft pull request artifact awaiting human approval."
     side_effect = "write"
+    requires_approval = True
     schema = {
         "type": "object",
         "properties": {
@@ -70,6 +93,7 @@ class DemoWriteTool(Tool):
             "diff": {"type": "string"},
         },
         "required": ["repo", "title", "body", "diff"],
+        "additionalProperties": False,
     }
 
     async def run(self, **kwargs: Any) -> ToolArtifact:
@@ -86,17 +110,21 @@ class DemoWriteTool(Tool):
 
 
 class ToolRegistry:
-    def __init__(self) -> None:
+    def __init__(self, demo_write: bool = True) -> None:
         self._tools: Dict[str, Tool] = {}
         self.register(EchoTool())
         self.register(UtcTimeTool())
-        self.register(DemoWriteTool())
+        if demo_write:
+            self.register(DemoWriteTool())
 
     def register(self, tool: Tool) -> None:
         self._tools[tool.name] = tool
 
     def get(self, name: str) -> Optional[Tool]:
         return self._tools.get(name)
+
+    def names(self) -> set[str]:
+        return set(self._tools)
 
     def list_tools(self) -> Dict[str, Dict[str, Any]]:
         return {

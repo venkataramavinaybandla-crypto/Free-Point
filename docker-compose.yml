@@ -1,20 +1,130 @@
-version: "3.8"
+name: free-point
 
 networks:
   harness_internal:
     driver: bridge
-    internal: false
+    internal: true
+  egress:
+    driver: bridge
+
+volumes:
+  rae_work:
+    name: free-point-rae-work
 
 services:
   harness:
     build:
-      context: ./harness
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: harness/Dockerfile
     ports:
-      - "8000:8000"
+      - "${HARNESS_PORT:-8000}:8000"
     environment:
       - ENVIRONMENT=local
       - LLM_PROVIDER=mock
       - DEV_ALLOW_INSECURE_LOCAL=true
+      - STORE_BACKEND=memory
+      - EXECUTE_CONSUMER_ENABLED=true
+      - INTERNAL_MCP_SECRET=${INTERNAL_MCP_SECRET:?set INTERNAL_MCP_SECRET}
+      - GITHUB_MCP_URL=http://github-mcp:8080/mcp
+      - RAG_MCP_URL=http://rag-mcp:8080/mcp
+      - GMAIL_MCP_URL=http://gmail-mcp:8080/mcp
+      - RAE_MCP_URL=http://rae-mcp:8080/mcp
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-}
     networks:
       - harness_internal
+      - egress
+    mem_limit: 1g
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  github-mcp:
+    build:
+      context: .
+      dockerfile: mcp/github/Dockerfile
+    environment:
+      - INTERNAL_MCP_SECRET=${INTERNAL_MCP_SECRET:?set INTERNAL_MCP_SECRET}
+    networks:
+      - harness_internal
+      - egress
+    mem_limit: 256m
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  gmail-mcp:
+    build:
+      context: .
+      dockerfile: mcp/gmail/Dockerfile
+    environment:
+      - INTERNAL_MCP_SECRET=${INTERNAL_MCP_SECRET:?set INTERNAL_MCP_SECRET}
+      - GMAIL_API_BASE_URL=${GMAIL_API_BASE_URL:-https://gmail.googleapis.com/gmail/v1}
+    networks:
+      - harness_internal
+      - egress
+    mem_limit: 256m
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  rae-mcp:
+    build:
+      context: .
+      dockerfile: mcp/rae/Dockerfile
+    image: free-point-rae-mcp
+    environment:
+      - INTERNAL_MCP_SECRET=${INTERNAL_MCP_SECRET:?set INTERNAL_MCP_SECRET}
+      - AWS_REGION=${AWS_REGION:-ap-south-1}
+      - RAE_ARTIFACTS_BUCKET=${RAE_ARTIFACTS_BUCKET:-free-point-artifacts}
+      - RAE_ARTIFACTS_PREFIX=artifacts/
+      - RAE_RESULTS_PREFIX=results/
+      - RAE_SANDBOX_IMAGE=free-point-rae-mcp
+      - RAE_WORK_DIR=/rae-work
+      - RAE_WORK_VOLUME=free-point-rae-work
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - rae_work:/rae-work
+    user: "0:0"
+    group_add:
+      - "0"
+    networks:
+      - harness_internal
+      - egress
+    mem_limit: 1g
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  rag-mcp:
+    build:
+      context: .
+      dockerfile: mcp/rag/Dockerfile
+    environment:
+      - INTERNAL_MCP_SECRET=${INTERNAL_MCP_SECRET:?set INTERNAL_MCP_SECRET}
+      - AWS_REGION=${AWS_REGION:-ap-south-1}
+      - RAG_S3_BUCKET=${RAG_S3_BUCKET:-free-point-rag-indexes}
+      - RAG_POINTERS_TABLE=${RAG_POINTERS_TABLE:-free-point-rag_pointers}
+    networks:
+      - harness_internal
+      - egress
+    mem_limit: 1g
+    cpus: 1.0
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

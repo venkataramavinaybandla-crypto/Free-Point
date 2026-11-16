@@ -67,8 +67,12 @@ resource "aws_launch_template" "app_lt" {
           - AWS_REGION=${var.region}
           - DYNAMODB_TABLE_JOBS=${aws_dynamodb_table.jobs.name}
           - DYNAMODB_TABLE_IDEMPOTENCY=${aws_dynamodb_table.idempotency.name}
+          - DYNAMODB_TABLE_GLOBAL_JOB_COUNTERS=${aws_dynamodb_table.global_job_counters.name}
           - SQS_QUEUE_JOBS_URL=${aws_sqs_queue.jobs.url}
           - SQS_QUEUE_JOBS_DLQ_URL=${aws_sqs_queue.jobs_dlq.url}
+          - RAE_QUEUE_URL=${aws_sqs_queue.rae.url}
+          - RAE_ARTIFACTS_BUCKET=${aws_s3_bucket.artifacts.bucket}
+          - RAE_RESULTS_PREFIX=results/
     COMPOSE
 
     cd /opt/free-point

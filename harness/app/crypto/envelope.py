@@ -85,11 +85,27 @@ class KMSKeyProvider(KeyProvider):
             raise ValueError(f"KMS Decrypt failed: {err}") from err
 
 
+_default_provider: Optional[KeyProvider] = None
+
+
+def default_key_provider() -> KeyProvider:
+    """Process-wide provider so a stored secret can be decrypted later.
+
+    Production uses KMS when ``KMS_KEY_ID`` is set; local runs use one shared
+    key for the lifetime of the process.
+    """
+    global _default_provider
+    if _default_provider is None:
+        kms_key_id = os.environ.get("KMS_KEY_ID")
+        _default_provider = KMSKeyProvider(kms_key_id) if kms_key_id else LocalKeyProvider()
+    return _default_provider
+
+
 class EnvelopeEncryptor:
     """Enforces KMS Envelope Encryption with AES-256-GCM."""
 
     def __init__(self, key_provider: Optional[KeyProvider] = None) -> None:
-        self.provider = key_provider or LocalKeyProvider()
+        self.provider = key_provider or default_key_provider()
 
     def encrypt(self, plaintext: str, user_id: str, tool: str) -> str:
         context = {"user_id": user_id, "tool": tool}

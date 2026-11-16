@@ -26,6 +26,7 @@ class OpenAICompatibleProvider(LLMProvider):
         messages: List[Dict[str, str]],
         json_schema: Optional[Dict[str, Any]] = None,
         max_tokens: int = 1024,
+        temperature: float = 0.0,
     ) -> LLMResponse:
         url = f"{self.base_url}/chat/completions"
         headers = {"Content-Type": "application/json"}
@@ -36,11 +37,17 @@ class OpenAICompatibleProvider(LLMProvider):
             "model": self.model_name,
             "messages": messages,
             "max_tokens": max_tokens,
+            "temperature": temperature,
         }
 
         if json_schema:
             payload["response_format"] = {
-                "type": "json_object",
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "agent_action",
+                    "strict": True,
+                    "schema": json_schema,
+                },
             }
 
         response = await self._client.post(url, json=payload, headers=headers)

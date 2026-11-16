@@ -7,6 +7,29 @@ resource "aws_sqs_queue" "jobs_dlq" {
   }
 }
 
+resource "aws_sqs_queue" "rae_dlq" {
+  name                      = "free-point-rae-dlq"
+  message_retention_seconds = 1209600
+
+  tags = {
+    Name = "free-point-rae-dlq"
+  }
+}
+
+resource "aws_sqs_queue" "rae" {
+  name                       = "free-point-rae"
+  visibility_timeout_seconds = 300
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.rae_dlq.arn
+    maxReceiveCount     = 2
+  })
+
+  tags = {
+    Name = "free-point-rae"
+  }
+}
+
 resource "aws_sqs_queue" "jobs" {
   name                       = "free-point-jobs"
   visibility_timeout_seconds = 180

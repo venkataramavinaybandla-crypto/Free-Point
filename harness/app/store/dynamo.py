@@ -10,9 +10,11 @@ from botocore.exceptions import ClientError
 
 from .base import (
     ApiKeyStore,
+    ApprovalStore,
     IdempotencyStore,
     InviteStore,
     Job,
+    JobCounterStore,
     JobStatus,
     JobStore,
     Queue,
@@ -69,6 +71,8 @@ class DynamoDBJobStore(JobStore):
             item["error"] = {"S": job.error}
         if job.approval_artifact:
             item["approval_artifact"] = {"S": json.dumps(job.approval_artifact)}
+        if job.tainted:
+            item["tainted"] = {"BOOL": True}
 
         self.client.put_item(TableName=self.table_name, Item=item)
         return job
@@ -94,6 +98,7 @@ class DynamoDBJobStore(JobStore):
             result=result,
             error=it.get("error", {}).get("S"),
             approval_artifact=artifact,
+            tainted=it.get("tainted", {}).get("BOOL", False),
             idempotency_key=it.get("idempotency_key", {}).get("S"),
             model_url=it.get("model_url", {}).get("S"),
             user_id=it.get("user_id", {}).get("S"),
@@ -122,6 +127,8 @@ class DynamoDBJobStore(JobStore):
             item["error"] = {"S": job.error}
         if job.approval_artifact:
             item["approval_artifact"] = {"S": json.dumps(job.approval_artifact)}
+        if job.tainted:
+            item["tainted"] = {"BOOL": True}
 
         self.client.put_item(TableName=self.table_name, Item=item)
         return job
@@ -551,6 +558,120 @@ class DynamoDBIdempotencyStore(IdempotencyStore):
         self.client.put_item(TableName=self.table_name, Item=item)
 
 
+class DynamoDBApprovalStore(ApprovalStore):
+    def __init__(self, client: Optional[Any] = None, table_name: str = "free-point-approvals") -> None:
+        self.client = client or get_dynamo_client()
+        self.table_name = os.environ.get("DYNAMODB_APPROVALS_TABLE", table_name)
+
+    @staticmethod
+    def _to_item(record: Dict[str, Any]) -> Dict[str, Any]:
+        item = {
+            "id": {"S": record["id"]},
+            "user_id": {"S": record["user_id"]},
+            "job_id": {"S": record["job_id"]},
+            "repo": {"S": record["repo"]},
+            "base": {"S": record["base"]},
+            "head": {"S": record["head"]},
+            "title": {"S": record["title"]},
+            "body": {"S": record["body"]},
+            "diff": {"S": record["diff"]},
+            "payload_hash": {"S": record["payload_hash"]},
+            "status": {"S": record.get("status", "pending")},
+            "used": {"BOOL": bool(record.get("used", False))},
+            "created_at": {"N": str(int(record["created_at"]))},
+            "expires_at": {"N": str(int(record["expires_at"]))},
+        }
+        if record.get("decided_at") is not None:
+            item["decided_at"] = {"N": str(int(record["decided_at"]))}
+        return item
+
+    @staticmethod
+    def _from_item(item: Dict[str, Any]) -> Dict[str, Any]:
+        record = {
+            "id": item["id"]["S"],
+            "user_id": item["user_id"]["S"],
+            "job_id": item["job_id"]["S"],
+            "repo": item["repo"]["S"],
+            "base": item["base"]["S"],
+            "head": item["head"]["S"],
+            "title": item["title"]["S"],
+            "body": item["body"]["S"],
+            "diff": item["diff"]["S"],
+            "payload_hash": item["payload_hash"]["S"],
+            "status": item["status"]["S"],
+            "used": item.get("used", {}).get("BOOL", False),
+            "created_at": int(item["created_at"]["N"]),
+            "expires_at": int(item["expires_at"]["N"]),
+        }
+        if "decided_at" in item:
+            record["decided_at"] = int(item["decided_at"]["N"])
+        return record
+
+    async def create_approval(self, approval: Dict[str, Any]) -> Dict[str, Any]:
+        self.client.put_item(TableName=self.table_name, Item=self._to_item(approval))
+        return approval
+
+    async def get_approval(self, approval_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        resp = self.client.get_item(TableName=self.table_name, Key={"id": {"S": approval_id}})
+        if "Item" not in resp or resp["Item"].get("user_id", {}).get("S") != user_id:
+            return None
+        return self._from_item(resp["Item"])
+
+    async def list_pending(self, user_id: str, now: int) -> List[Dict[str, Any]]:
+        resp = self.client.query(
+            TableName=self.table_name,
+            IndexName="user_id-index",
+            KeyConditionExpression="user_id = :u",
+            FilterExpression="#status = :pending AND expires_at > :now",
+            ExpressionAttributeNames={"#status": "status"},
+            ExpressionAttributeValues={
+                ":u": {"S": user_id},
+                ":pending": {"S": "pending"},
+                ":now": {"N": str(now)},
+            },
+            ScanIndexForward=False,
+        )
+        return [self._from_item(item) for item in resp.get("Items", [])]
+
+    async def decide(
+        self, approval_id: str, user_id: str, decision: str, expected_hash: str, now: int
+    ) -> str:
+        try:
+            self.client.update_item(
+                TableName=self.table_name,
+                Key={"id": {"S": approval_id}},
+                ConditionExpression=(
+                    "attribute_exists(id) AND user_id = :u AND #status = :pending "
+                    "AND used = :false AND expires_at > :now AND payload_hash = :h"
+                ),
+                UpdateExpression="SET #status = :decision, used = :true, decided_at = :now",
+                ExpressionAttributeNames={"#status": "status"},
+                ExpressionAttributeValues={
+                    ":u": {"S": user_id},
+                    ":pending": {"S": "pending"},
+                    ":false": {"BOOL": False},
+                    ":now": {"N": str(now)},
+                    ":h": {"S": expected_hash},
+                    ":decision": {"S": decision},
+                },
+            )
+            return "ok"
+        except ClientError as err:
+            if err.response["Error"]["Code"] != "ConditionalCheckFailedException":
+                raise
+
+        record = await self.get_approval(approval_id, user_id)
+        if not record:
+            return "not_found"
+        if record["payload_hash"] != expected_hash:
+            return "hash_mismatch"
+        if record["used"] or record["status"] != "pending":
+            return "already_decided"
+        if record["expires_at"] <= now:
+            return "expired"
+        return "already_decided"
+
+
 class DynamoDBSecretStore(SecretStore):
     def __init__(self, client: Optional[Any] = None, table_name: str = "free-point-user_secrets") -> None:
         self.client = client or get_dynamo_client()
@@ -583,3 +704,49 @@ class DynamoDBSecretStore(SecretStore):
         for it in resp.get("Items", []):
             results.append({"name": it["name"]["S"], "updated_at": int(it["updated_at"]["N"])})
         return sorted(results, key=lambda x: x["name"])
+
+    async def delete_secret(self, user_id: str, name: str) -> bool:
+        self.client.delete_item(
+            TableName=self.table_name,
+            Key={"user_id": {"S": user_id}, "name": {"S": name}},
+        )
+        return True
+
+
+class DynamoDBJobCounterStore(JobCounterStore):
+    def __init__(self, client: Optional[Any] = None, table_name: str = "free-point-global_job_counters") -> None:
+        self.client = client or get_dynamo_client()
+        self.table_name = os.environ.get("DYNAMODB_GLOBAL_COUNTERS_TABLE", table_name)
+
+    async def increment_and_check(self, date_str: str, cap: int) -> Tuple[bool, int]:
+        key_id = f"job_count:{date_str}"
+        exp = int(time.time()) + 7 * 86400
+
+        try:
+            resp = self.client.update_item(
+                TableName=self.table_name,
+                Key={"id": {"S": key_id}},
+                UpdateExpression="ADD #cnt :val SET expires_at = if_not_exists(expires_at, :exp)",
+                ConditionExpression="attribute_not_exists(#cnt) OR #cnt < :cap",
+                ExpressionAttributeNames={"#cnt": "count"},
+                ExpressionAttributeValues={":val": {"N": "1"}, ":cap": {"N": str(cap)}, ":exp": {"N": str(exp)}},
+                ReturnValues="UPDATED_NEW",
+            )
+            count = int(resp["Attributes"]["count"]["N"])
+            return False, count
+        except ClientError as e:
+            if e.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
+                count = await self.get_count(date_str)
+                return True, count
+            raise
+
+    async def get_count(self, date_str: str) -> int:
+        key_id = f"job_count:{date_str}"
+        resp = self.client.get_item(TableName=self.table_name, Key={"id": {"S": key_id}})
+        if "Item" in resp and "count" in resp["Item"]:
+            return int(resp["Item"]["count"]["N"])
+        return 0
+
+    async def reset(self) -> None:
+        pass
+

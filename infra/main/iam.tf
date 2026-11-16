@@ -65,8 +65,29 @@ resource "aws_iam_policy" "app_policy" {
           aws_dynamodb_table.api_keys.arn,
           "${aws_dynamodb_table.api_keys.arn}/index/*",
           aws_dynamodb_table.usage_counters.arn,
+          aws_dynamodb_table.global_job_counters.arn,
+          aws_dynamodb_table.approvals.arn,
+          "${aws_dynamodb_table.approvals.arn}/index/*",
           aws_dynamodb_table.user_secrets.arn
         ]
+      },
+      {
+        Sid    = "S3ArtifactsAccess"
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:GetObject"
+        ]
+        Resource = [
+          "${aws_s3_bucket.artifacts.arn}/artifacts/*",
+          "${aws_s3_bucket.artifacts.arn}/results/*"
+        ]
+      },
+      {
+        Sid      = "SQSRAESend"
+        Effect   = "Allow"
+        Action   = ["sqs:SendMessage", "sqs:GetQueueUrl"]
+        Resource = [aws_sqs_queue.rae.arn]
       },
       {
         Sid    = "KMSKeyAccess"

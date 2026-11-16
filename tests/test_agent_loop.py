@@ -14,7 +14,7 @@ async def test_schema_retry_recovers_on_good_json():
     provider = MockLLMProvider(
         scripted_responses=[
             "NOT_VALID_JSON",
-            {"action": "finish", "final_response": "Recovered from retry"},
+            {"action": "final", "tool_name": "", "arguments": {}, "final_answer": "Recovered from retry"},
         ]
     )
     loop = AgentLoop(provider=provider, tool_registry=ToolRegistry())
@@ -39,12 +39,16 @@ async def test_schema_retry_exhaustion_fails():
 
     result_job = await loop.run(job)
     assert result_job.status == JobStatus.FAILED
-    assert "Model failed to produce valid JSON after 2 retries" in result_job.error
+    assert "Model failed after 2 retries" in result_job.error
 
 
 @pytest.mark.asyncio
 async def test_allowlist_rejection_of_undeclared_tool():
-    provider = MockLLMProvider(scripted_responses=[{"action": "call_tool", "tool_name": "utc_time", "tool_args": {}}])
+    provider = MockLLMProvider(
+        scripted_responses=[
+            {"action": "call_tool", "tool_name": "utc_time", "arguments": {}, "final_answer": ""}
+        ]
+    )
     loop = AgentLoop(provider=provider, tool_registry=ToolRegistry())
     job = Job(task="test allowlist", declared_tools=["echo"])
 
@@ -58,9 +62,9 @@ async def test_allowlist_rejection_of_undeclared_tool():
 async def test_step_cap_enforcement():
     provider = MockLLMProvider(
         scripted_responses=[
-            {"action": "call_tool", "tool_name": "echo", "tool_args": {"message": "1"}},
-            {"action": "call_tool", "tool_name": "echo", "tool_args": {"message": "2"}},
-            {"action": "call_tool", "tool_name": "echo", "tool_args": {"message": "3"}},
+            {"action": "call_tool", "tool_name": "echo", "arguments": {"message": "1"}, "final_answer": ""},
+            {"action": "call_tool", "tool_name": "echo", "arguments": {"message": "2"}, "final_answer": ""},
+            {"action": "call_tool", "tool_name": "echo", "arguments": {"message": "3"}, "final_answer": ""},
         ]
     )
     loop = AgentLoop(provider=provider, tool_registry=ToolRegistry(), max_steps=2)
@@ -101,7 +105,8 @@ async def test_write_tool_pauses_for_approval():
             {
                 "action": "call_tool",
                 "tool_name": "create_draft_pr",
-                "tool_args": {"repo": "free-point/core", "title": "fix", "body": "details", "diff": "+1"},
+                "arguments": {"repo": "free-point/core", "title": "fix", "body": "details", "diff": "+1"},
+                "final_answer": "",
             }
         ]
     )
@@ -113,3 +118,60 @@ async def test_write_tool_pauses_for_approval():
     assert result_job.approval_artifact is not None
     assert result_job.approval_artifact["tool_name"] == "create_draft_pr"
     assert "artifact_hash" in result_job.approval_artifact
+
+
+@pytest.mark.asyncio
+async def test_ollama_key_normalization_and_preprocessing():
+    """Covers: key aliasing (tool→tool_name), think-block stripping, json-fence stripping,
+    undeclared tool rejection."""
+    registry = ToolRegistry()
+
+    # 1. Key "tool" instead of "tool_name" is normalized, then tool runs successfully.
+    provider = MockLLMProvider(
+        scripted_responses=[
+            # tool_name missing; "tool" should be mapped to tool_name
+            '{"action":"call_tool","tool":"echo","arguments":{"message":"hi"},"final_answer":""}',
+            {"action": "final", "tool_name": "", "arguments": {}, "final_answer": "done"},
+        ]
+    )
+    loop = AgentLoop(provider=provider, tool_registry=registry)
+    job = Job(task="normalize key test", declared_tools=["echo"])
+    result = await loop.run(job)
+    assert result.status == JobStatus.COMPLETED
+    assert result.result == "done"
+
+    # 2. <think> block stripped before parse.
+    provider2 = MockLLMProvider(
+        scripted_responses=[
+            '<think>reasoning here</think>{"action":"final","tool_name":"","arguments":{},"final_answer":"think-stripped"}',
+        ]
+    )
+    loop2 = AgentLoop(provider=provider2, tool_registry=registry)
+    job2 = Job(task="think block test", declared_tools=["echo"])
+    result2 = await loop2.run(job2)
+    assert result2.status == JobStatus.COMPLETED
+    assert result2.result == "think-stripped"
+
+    # 3. ```json fence stripped before parse.
+    provider3 = MockLLMProvider(
+        scripted_responses=[
+            '```json\n{"action":"final","tool_name":"","arguments":{},"final_answer":"fence-stripped"}\n```',
+        ]
+    )
+    loop3 = AgentLoop(provider=provider3, tool_registry=registry)
+    job3 = Job(task="fence test", declared_tools=["echo"])
+    result3 = await loop3.run(job3)
+    assert result3.status == JobStatus.COMPLETED
+    assert result3.result == "fence-stripped"
+
+    # 4. Undeclared tool is rejected with security policy violation.
+    provider4 = MockLLMProvider(
+        scripted_responses=[
+            {"action": "call_tool", "tool_name": "banned_tool", "arguments": {}, "final_answer": ""},
+        ]
+    )
+    loop4 = AgentLoop(provider=provider4, tool_registry=registry)
+    job4 = Job(task="undeclared tool test", declared_tools=["echo"])
+    result4 = await loop4.run(job4)
+    assert result4.status == JobStatus.FAILED
+    assert "Security policy violation" in result4.error

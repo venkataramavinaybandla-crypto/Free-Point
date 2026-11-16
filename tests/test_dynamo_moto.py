@@ -8,12 +8,12 @@ import httpx
 import pytest
 from moto import mock_aws
 
-from harness.app.auth.tokens import generate_invite_code, hash_sha256
 from harness.app.crypto.envelope import EnvelopeEncryptor, KMSKeyProvider
 from harness.app.main import app
 from harness.app.store.dynamo import (
     DynamoDBApiKeyStore,
     DynamoDBInviteStore,
+    DynamoDBJobCounterStore,
     DynamoDBSecretStore,
     DynamoDBUsageStore,
     DynamoDBUserStore,
@@ -83,6 +83,12 @@ def setup_dynamo_tables(dynamo_client):
     )
     dynamo_client.create_table(
         TableName="free-point-usage_counters",
+        KeySchema=[{"AttributeName": "id", "KeyType": "HASH"}],
+        AttributeDefinitions=[{"AttributeName": "id", "AttributeType": "S"}],
+        BillingMode="PAY_PER_REQUEST",
+    )
+    dynamo_client.create_table(
+        TableName="free-point-global_job_counters",
         KeySchema=[{"AttributeName": "id", "KeyType": "HASH"}],
         AttributeDefinitions=[{"AttributeName": "id", "AttributeType": "S"}],
         BillingMode="PAY_PER_REQUEST",
@@ -171,6 +177,22 @@ async def test_dynamodb_stores_direct():
         listed = await secret_store.list_secrets("usr-1")
         assert len(listed) == 1
         assert listed[0]["name"] == "token"
+        deleted = await secret_store.delete_secret("usr-1", "token")
+        assert deleted is True
+        assert await secret_store.get_secret("usr-1", "token") is None
+        assert await secret_store.list_secrets("usr-1") == []
+
+        # 6. Global job counter store
+        counter_store = DynamoDBJobCounterStore(client=dynamo)
+        exceeded, count = await counter_store.increment_and_check("2026-11-15", cap=2)
+        assert exceeded is False
+        assert count == 1
+        exceeded2, count2 = await counter_store.increment_and_check("2026-11-15", cap=2)
+        assert exceeded2 is False
+        assert count2 == 2
+        exceeded3, count3 = await counter_store.increment_and_check("2026-11-15", cap=2)
+        assert exceeded3 is True
+        assert count3 == 2
 
 
 @pytest.mark.asyncio
@@ -188,20 +210,15 @@ async def test_end_to_end_api_with_dynamodb_backend():
         try:
             transport = httpx.ASGITransport(app=app)
             async with httpx.AsyncClient(transport=transport, base_url="https://test") as client:
-                # 1. Create invite in DynamoDB
-                invite_store = DynamoDBInviteStore(client=dynamo)
-                code = generate_invite_code()
-                await invite_store.create_invite(hash_sha256(code), int(time.time()) + 3600)
-
-                # 2. Signup through API
+                # 1. Signup through API (open signup, email + password only)
                 signup_resp = await client.post(
                     "/auth/signup",
-                    json={"invite": code, "email": "dynamo_user@example.com", "password": "Password123!"},
+                    json={"email": "dynamo_user@example.com", "password": "Password123!"},
                 )
                 assert signup_resp.status_code == 201
                 csrf = signup_resp.json()["csrf_token"]
 
-                # 3. Create API key
+                # 2. Create API key
                 key_resp = await client.post("/keys", headers={"X-CSRF-Token": csrf})
                 assert key_resp.status_code == 201
                 api_key = key_resp.json()["key"]

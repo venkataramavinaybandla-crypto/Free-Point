@@ -21,7 +21,7 @@ Running record of decisions, corrections, and status. Update it whenever somethi
 - D16: MockLLM built in **P1**; load tests run against it.
 - D17: Cut line: Core = harness, auth, GitHub, RAG. Nice = Gmail. Drop first = RAE.
 - D18: Plan **frozen at v4**. No more review rounds; fix issues only when they block a phase.
-- D19: Single-use invite codes stored as SHA-256 hash only with expiry; created via `scripts/create_invite.py`.
+- D19: Single-use invite codes stored as SHA-256 hash only with expiry; created via `scripts/create_invite.py`. (Superseded by D35)
 - D20: Passwords hashed with argon2id (`argon2-cffi`); random 32-byte sessions stored hashed with expiry, httpOnly + Secure + SameSite=Strict cookies, CSRF double-submit token on state-changing session routes.
 - D21: API keys follow format `fp_<prefix>_<secret>` (32+ bytes entropy, shown once, stored prefix + SHA-256 hash, max 5 active per user).
 - D22: Route isolation enforced: `require_api_key` for all `/v1` routes and `require_session` for web session routes; keys never work on session routes and vice versa.
@@ -29,6 +29,15 @@ Running record of decisions, corrections, and status. Update it whenever somethi
 - D24: Idempotency bound to `user_id` plus request hash; same key + different payload returns 422.
 - D25: KMS envelope encryption (`GenerateDataKey` + `AES-256-GCM`), EncryptionContext = `user_id` + `tool`; `LocalKeyProvider` for dev/test; secrets decrypted at job time only and redacted from logs.
 - D26: Storage backend abstracted with `STORE_BACKEND=memory|dynamodb`.
+- D27: P3b web UI is plain HTML + CSS + ES modules served by the FastAPI app (`/static` via StaticFiles, pages via FileResponse), with strict self-only CSP and all fonts/assets self-hosted. Approvals live in `free-point-approvals` (single-use, TTL, `user_id-index`); approving enqueues through the existing `Queue` interface to the execute queue. Browser pages never use localStorage/sessionStorage.
+- D28: Landing copy is audited against `agents/Architecture.json`; false claims (per-invocation Docker sandboxes, merge/Slack/Drive features, fabricated metrics) were rewritten. Audit record: `docs/web-copy-audit.md`.
+- D29: Internal MCP calls are HMAC-signed (`INTERNAL_MCP_SECRET`) with tenant, job, timestamp, token, allowlist and base branch in the signed payload; tool servers reject unsigned, stale or tampered calls. GitHub tokens are decrypted per call from the `github` secret (context user_id+github) and travel only in the signed header.
+- D30: GitHub writes are split into `create_draft_pr` (pure artifact, no API call) and `execute_draft_pr` (approval consumer only). Branches are deterministic (`freepoint/<job_id>`), PRs are drafts, existing branch/PR is reused, and main/master is never a write target. Repo allowlists are stored encrypted per user.
+- D31: RAG indexes are per-user FAISS files under `index/<user_id>/v<n>` in S3; version objects are created with `If-None-Match: *` and the DynamoDB pointer is flipped with a conditional update and retry. Embeddings use baked-in bge-small ONNX; the trusted tenant always comes from the signed context.
+- D32: Gmail uses only `gmail.readonly`. OAuth start/callback are session routes with state + PKCE; the redirect URI comes from `GOOGLE_REDIRECT_URI`. The refresh token is KMS-envelope-encrypted with context `user_id` + `gmail`; the harness mints an access token per call and puts it only in the signed internal header. Testing-mode limits (7-day refresh expiry, test users) are documented in `docs/gmail-oauth.md`.
+- D33: RAE is static-only. S3 files and shallow https clones are parsed in a child container with `--network none`, read-only root, uid 65534, dropped capabilities, cpu/memory/pids/time/size caps, and a tmpfs `/tmp`. Archive members are checked for zip-slip, symlinks, entry-count, total-size, and compression-ratio bombs. Output is chunked to 3,500 characters with `get_chunk(n)`.
+- D34: RAE placement is a separate SQS queue/DLQ, instance profile, and ASG in `infra/main/rae.tf`; it has artifacts read, results write, its own queue only, and no KMS or DynamoDB permissions. The harness submits `{job_id, s3_key}` and polls `results/{job_id}.json`. The analyzer target is never executed.
+- D35: Invite codes are dormant. Planned later as OPTIONAL referral codes tied to credits (inviter and invited both earn credits). Never mandatory.
 
 ## Corrections (history)
 - Early idea was an AI agent with built-in features. Corrected to HaaS.
@@ -50,7 +59,8 @@ Running record of decisions, corrections, and status. Update it whenever somethi
 | P1 Core harness | done |
 | P2 Skeleton deploy | done |
 | P3 Auth and API management | done |
-| P4 MCP tools | not started |
+| P3b Web UI | done |
+| P4 MCP tools | done (GitHub, RAG, Gmail, RAE) |
 | P5 Prove it | not started |
 | P6 Demo and report | not started |
 

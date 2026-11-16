@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Model settings — Free Point</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script type="module" src="/static/js/settings.js"></script>
+</head>
+<body>
+  <div class="spectrum" aria-hidden="true"></div>
+  <svg class="noise" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <filter id="noiseFilter">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"></feTurbulence>
+      <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.45 0"></feColorMatrix>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#noiseFilter)"></rect>
+  </svg>
+
+  <header id="site-nav" class="site-nav"></header>
+
+  <main class="app-main">
+    <div class="app-head">
+      <div>
+        <p class="eyebrow">Console</p>
+        <h1>Model settings</h1>
+        <p>Store your model URL and token. Saved values are never returned by the API.</p>
+      </div>
+      <div class="test-connection-wrapper">
+        <button id="test-model" class="btn btn-ghost" type="button">Test connection</button>
+        <span id="test-result" class="test-result" role="status" hidden></span>
+      </div>
+    </div>
+
+    <div class="settings-grid">
+      <section class="panel glass">
+        <div class="panel-head">
+          <h2>Connect a model</h2>
+          <span class="badge">HTTPS only</span>
+        </div>
+        <form id="model-form" class="auth-form">
+          <div class="field">
+            <label for="model-url">Model URL</label>
+            <input class="input" id="model-url" name="model_url" type="url" inputmode="url" placeholder="https://your-model.example/v1" autocomplete="off">
+            <p class="form-hint">Saved values are never displayed. Leave blank to keep the current URL.</p>
+          </div>
+          <div class="field">
+            <label for="model-token">Bearer token</label>
+            <input class="input" id="model-token" name="model_bearer_token" type="password" placeholder="Stored value is never displayed" autocomplete="off">
+            <p class="form-hint">Sent as an Authorization header to your endpoint, never to the browser.</p>
+          </div>
+          <p id="settings-message" class="form-message" role="status" hidden></p>
+          <button id="save-model" class="btn btn-primary" type="submit">Save settings</button>
+        </form>
+      </section>
+
+      <section class="panel glass stack-sm">
+        <div class="panel-head">
+          <h2>Stored secrets</h2>
+          <span class="eyebrow">Names only</span>
+        </div>
+        <p class="small">Values are encrypted with KMS envelope encryption and never shown again.</p>
+        <p id="secret-notice" class="state" role="status">Loading stored secrets...</p>
+        <ul id="secret-list" class="secret-list"></ul>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

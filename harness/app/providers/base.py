@@ -18,5 +18,6 @@ class LLMProvider(ABC):
         messages: List[Dict[str, str]],
         json_schema: Optional[Dict[str, Any]] = None,
         max_tokens: int = 1024,
+        temperature: float = 0.0,
     ) -> LLMResponse:
         pass

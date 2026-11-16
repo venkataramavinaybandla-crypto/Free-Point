@@ -1,17 +1,14 @@
 """Comprehensive P3 auth, session, API management, and envelope encryption tests."""
 
 import os
-import time
 
 import httpx
 import pytest
 
 from harness.app.auth import reset_ip_tracker
-from harness.app.auth.tokens import generate_invite_code, hash_sha256
 from harness.app.crypto.envelope import EnvelopeEncryptor, LocalKeyProvider, redact_secrets
 from harness.app.main import app
 from harness.app.store.factory import (
-    get_invite_store,
     reset_stores,
 )
 
@@ -25,51 +22,153 @@ def clean_stores():
     reset_ip_tracker()
 
 
-async def create_valid_invite(days: int = 7) -> str:
-    code = generate_invite_code()
-    code_hash = hash_sha256(code)
-    expires_at = int(time.time()) + (days * 86400)
-    store = get_invite_store()
-    await store.create_invite(code_hash, expires_at)
-    return code
+@pytest.mark.asyncio
+async def test_signup_works_with_email_and_password_only():
+    """Signup works with email and password only; no invite needed."""
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="https://test") as client:
+        resp = await client.post(
+            "/auth/signup",
+            json={"email": "open_signup@example.com", "password": "Password123!"},
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["status"] == "ok"
+        assert data["email"] == "open_signup@example.com"
+        assert "csrf_token" in data
 
 
 @pytest.mark.asyncio
-async def test_invite_single_use_and_expiry():
-    """Test invite codes are single-use and cannot be used once expired."""
+async def test_signup_invite_field_ignored():
+    """Any invite field passed during signup is safely ignored."""
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="https://test") as client:
-        # 1. No invite means no signup
         resp = await client.post(
             "/auth/signup",
-            json={"invite": "invalid-code", "email": "u1@example.com", "password": "Password123!"},
-        )
-        assert resp.status_code == 400
-        assert "invalid invite code" in resp.json()["detail"].lower()
-
-        # 2. Expired invite rejected
-        expired_invite = await create_valid_invite(days=-1)
-        resp = await client.post(
-            "/auth/signup",
-            json={"invite": expired_invite, "email": "u2@example.com", "password": "Password123!"},
-        )
-        assert resp.status_code == 400
-
-        # 3. Valid invite succeeds
-        valid_invite = await create_valid_invite(days=7)
-        resp = await client.post(
-            "/auth/signup",
-            json={"invite": valid_invite, "email": "u3@example.com", "password": "Password123!"},
+            json={
+                "email": "invite_ignored@example.com",
+                "password": "Password123!",
+                "invite": "FP-INVALID-CODE-OR-EXPIRED",
+            },
         )
         assert resp.status_code == 201
         assert resp.json()["status"] == "ok"
 
-        # 4. Single-use: same invite reused fails
-        resp_reuse = await client.post(
+
+@pytest.mark.asyncio
+async def test_signup_enumeration_safe_errors():
+    """Signup returns uniform errors for existing email and invalid email format (no user enumeration)."""
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="https://test") as client:
+        # Create user
+        r1 = await client.post(
             "/auth/signup",
-            json={"invite": valid_invite, "email": "u4@example.com", "password": "Password123!"},
+            json={"email": "existing_user@example.com", "password": "Password123!"},
         )
-        assert resp_reuse.status_code == 400
+        assert r1.status_code == 201
+
+        # Attempt to register existing user with same email (and uppercase variant)
+        r2 = await client.post(
+            "/auth/signup",
+            json={"email": "EXISTING_USER@EXAMPLE.COM", "password": "Password123!"},
+        )
+        assert r2.status_code == 400
+        assert r2.json()["detail"] == "Could not create account."
+
+        # Attempt to register with invalid email format
+        r3 = await client.post(
+            "/auth/signup",
+            json={"email": "not-an-email", "password": "Password123!"},
+        )
+        assert r3.status_code == 400
+        assert r3.json()["detail"] == "Could not create account."
+
+
+@pytest.mark.asyncio
+async def test_no_route_or_page_references_invite_at_runtime():
+    """No route or rendered web page references an invite at runtime."""
+    # 1. Routes
+    for route in app.routes:
+        path = getattr(route, "path", "")
+        assert "invite" not in path.lower(), f"Route references invite: {path}"
+
+    # 2. Pages
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="https://test") as client:
+        pages = ["/", "/signup", "/login", "/dashboard", "/settings", "/approvals"]
+        for p in pages:
+            resp = await client.get(p, headers={"Accept": "text/html"})
+            assert resp.status_code == 200, f"Page {p} returned {resp.status_code}"
+            assert "invite" not in resp.text.lower(), f"Page {p} contains 'invite' in rendered text"
+
+
+@pytest.mark.asyncio
+async def test_global_cap_returns_503_and_resets_on_new_utc_day(monkeypatch):
+    """Global daily job cap returns 503 with Retry-After when cap reached and resets on a new UTC day."""
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="https://test") as client:
+        s_resp = await client.post(
+            "/auth/signup",
+            json={"email": "cap_tester@example.com", "password": "Password123!"},
+        )
+        csrf = s_resp.json()["csrf_token"]
+        k_resp = await client.post("/keys", headers={"X-CSRF-Token": csrf})
+        api_key = k_resp.json()["key"]
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        # Set cap to 2
+        monkeypatch.setenv("GLOBAL_DAILY_JOB_CAP", "2")
+
+        from datetime import datetime, timezone
+        day1 = datetime(2026, 11, 15, 12, 0, 0, tzinfo=timezone.utc)
+        day2 = datetime(2026, 11, 16, 0, 1, 0, tzinfo=timezone.utc)
+
+        class MockDatetime(datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return cls._current_mock
+
+        MockDatetime._current_mock = day1
+        monkeypatch.setattr("harness.app.api.routes.datetime", MockDatetime)
+
+        # 1. First job accepted
+        j1 = await client.post(
+            "/v1/jobs",
+            headers={**headers, "Idempotency-Key": "cap-job-1"},
+            json={"task": "Echo 1", "tools": ["echo"]},
+        )
+        assert j1.status_code in (200, 201)
+
+        # 2. Second job accepted (cap = 2 reached)
+        j2 = await client.post(
+            "/v1/jobs",
+            headers={**headers, "Idempotency-Key": "cap-job-2"},
+            json={"task": "Echo 2", "tools": ["echo"]},
+        )
+        assert j2.status_code in (200, 201)
+
+        # 3. Third job rejected with 503
+        j3 = await client.post(
+            "/v1/jobs",
+            headers={**headers, "Idempotency-Key": "cap-job-3"},
+            json={"task": "Echo 3", "tools": ["echo"]},
+        )
+        assert j3.status_code == 503
+        assert "Retry-After" in j3.headers
+        retry_after = int(j3.headers["Retry-After"])
+        assert retry_after > 0
+        assert "global daily job cap" in j3.json()["detail"].lower()
+
+        # 4. Advance to new UTC day: day2
+        MockDatetime._current_mock = day2
+
+        # 5. Job accepted on new UTC day
+        j4 = await client.post(
+            "/v1/jobs",
+            headers={**headers, "Idempotency-Key": "cap-job-4"},
+            json={"task": "Echo 4", "tools": ["echo"]},
+        )
+        assert j4.status_code in (200, 201)
 
 
 @pytest.mark.asyncio
@@ -77,14 +176,13 @@ async def test_signup_login_logout_flow_and_cookie_flags():
     """Test signup, login, logout and verification of session cookie security flags."""
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="https://test") as client:
-        invite = await create_valid_invite()
         email = "testflow@example.com"
         password = "SecurePassword456!"
 
         # Signup
         signup_resp = await client.post(
             "/auth/signup",
-            json={"invite": invite, "email": email, "password": password},
+            json={"email": email, "password": password},
         )
         assert signup_resp.status_code == 201
 
@@ -140,10 +238,9 @@ async def test_csrf_double_submit_protection():
     """State-changing session routes reject missing or mismatched CSRF tokens."""
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="https://test") as client:
-        invite = await create_valid_invite()
         signup_resp = await client.post(
             "/auth/signup",
-            json={"invite": invite, "email": "csrf_test@example.com", "password": "Password789!"},
+            json={"email": "csrf_test@example.com", "password": "Password789!"},
         )
         valid_csrf = signup_resp.json()["csrf_token"]
 
@@ -166,10 +263,9 @@ async def test_api_keys_lifecycle_and_show_once():
     """Test API key creation, max 5 active limit, rotate, revoke, and show-once behavior."""
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="https://test") as client:
-        invite = await create_valid_invite()
         signup_resp = await client.post(
             "/auth/signup",
-            json={"invite": invite, "email": "keys_lifecycle@example.com", "password": "Password789!"},
+            json={"email": "keys_lifecycle@example.com", "password": "Password789!"},
         )
         csrf = signup_resp.json()["csrf_token"]
 
@@ -217,10 +313,9 @@ async def test_wrong_key_and_revoked_key_401():
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="https://test") as client:
         # Provision user and key
-        invite = await create_valid_invite()
         signup_resp = await client.post(
             "/auth/signup",
-            json={"invite": invite, "email": "key_auth@example.com", "password": "Password789!"},
+            json={"email": "key_auth@example.com", "password": "Password789!"},
         )
         csrf = signup_resp.json()["csrf_token"]
         key_resp = await client.post("/keys", headers={"X-CSRF-Token": csrf})
@@ -269,10 +364,9 @@ async def test_route_isolation_keys_never_work_on_session_routes_and_vice_versa(
     """Strict isolation: API keys are rejected on session routes, sessions on /v1 routes."""
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="https://test") as client:
-        invite = await create_valid_invite()
         signup_resp = await client.post(
             "/auth/signup",
-            json={"invite": invite, "email": "isolation@example.com", "password": "Password789!"},
+            json={"email": "isolation@example.com", "password": "Password789!"},
         )
         csrf = signup_resp.json()["csrf_token"]
         key_resp = await client.post("/keys", headers={"X-CSRF-Token": csrf})
@@ -304,10 +398,9 @@ async def test_rate_limiting_and_quota_headers():
 
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="https://test") as client:
-        invite = await create_valid_invite()
         signup_resp = await client.post(
             "/auth/signup",
-            json={"invite": invite, "email": "ratelimit@example.com", "password": "Password789!"},
+            json={"email": "ratelimit@example.com", "password": "Password789!"},
         )
         csrf = signup_resp.json()["csrf_token"]
         key_resp = await client.post("/keys", headers={"X-CSRF-Token": csrf})
@@ -345,10 +438,9 @@ async def test_idempotency_key_conflict_422():
     """Same Idempotency-Key with different request body returns 422."""
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="https://test") as client:
-        invite = await create_valid_invite()
         signup_resp = await client.post(
             "/auth/signup",
-            json={"invite": invite, "email": "idemp_test@example.com", "password": "Password789!"},
+            json={"email": "idemp_test@example.com", "password": "Password789!"},
         )
         csrf = signup_resp.json()["csrf_token"]
         key_resp = await client.post("/keys", headers={"X-CSRF-Token": csrf})
@@ -404,10 +496,9 @@ async def test_secret_never_present_in_logs_or_get_responses():
     """Secrets are never returned in GET /secrets or GET /keys and are redacted from logs."""
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="https://test") as client:
-        invite = await create_valid_invite()
         signup_resp = await client.post(
             "/auth/signup",
-            json={"invite": invite, "email": "secrets_leak_test@example.com", "password": "Password789!"},
+            json={"email": "secrets_leak_test@example.com", "password": "Password789!"},
         )
         csrf = signup_resp.json()["csrf_token"]
 

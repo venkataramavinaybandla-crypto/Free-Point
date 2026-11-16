@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Approvals — Free Point</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script type="module" src="/static/js/approvals.js"></script>
+</head>
+<body>
+  <div class="spectrum" aria-hidden="true"></div>
+  <svg class="noise" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <filter id="noiseFilter">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"></feTurbulence>
+      <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.45 0"></feColorMatrix>
+    </filter>
+    <rect width="100%" height="100%" filter="url(#noiseFilter)"></rect>
+  </svg>
+
+  <header id="site-nav" class="site-nav"></header>
+
+  <main class="app-main">
+    <div class="app-head">
+      <div>
+        <p class="eyebrow">Human sign-off</p>
+        <h1>Approvals</h1>
+        <p>Every GitHub write stops here. Review the exact payload and hash before the worker creates a draft PR.</p>
+      </div>
+      <span class="badge badge-warn">Single-use · expiring</span>
+    </div>
+
+    <div class="approval-grid">
+      <section class="panel glass">
+        <div class="panel-head">
+          <h2>Pending</h2>
+          <span class="eyebrow">GET /approvals</span>
+        </div>
+        <p id="approvals-notice" class="state" role="status">Loading pending approvals...</p>
+        <div id="approvals-list" class="approval-list"></div>
+      </section>
+
+      <section class="panel glass">
+        <p id="detail-state" class="state">Select a pending approval to review the exact PR payload.</p>
+        <div id="detail-body" hidden>
+          <div class="panel-head">
+            <h2 id="detail-title"></h2>
+            <span class="badge badge-warn">Pending</span>
+          </div>
+          <dl class="kv">
+            <dt>Repository</dt><dd class="mono" id="detail-repo"></dd>
+            <dt>Base</dt><dd class="mono" id="detail-base"></dd>
+            <dt>Head</dt><dd class="mono" id="detail-head"></dd>
+            <dt>Job</dt><dd class="mono" id="detail-job"></dd>
+            <dt>Created</dt><dd id="detail-created"></dd>
+            <dt>Expires</dt><dd id="detail-expires"></dd>
+          </dl>
+
+          <p class="eyebrow">Pull request body</p>
+          <pre id="detail-body-text" class="pr-body"></pre>
+
+          <p class="eyebrow">Diff</p>
+          <pre id="detail-diff" class="diff"></pre>
+
+          <p class="eyebrow">Payload hash</p>
+          <p id="detail-hash" class="hash"></p>
+
+          <div class="detail-actions">
+            <button id="approve-button" class="btn btn-primary" type="button" disabled>Approve</button>
+            <button id="reject-button" class="btn btn-danger" type="button" disabled>Reject</button>
+          </div>
+          <p id="decision-message" class="form-message" role="status" hidden></p>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

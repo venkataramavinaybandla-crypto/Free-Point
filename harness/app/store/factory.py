@@ -5,8 +5,10 @@ from typing import Optional
 
 from .base import (
     ApiKeyStore,
+    ApprovalStore,
     IdempotencyStore,
     InviteStore,
+    JobCounterStore,
     JobStore,
     Queue,
     SecretStore,
@@ -16,8 +18,10 @@ from .base import (
 )
 from .dynamo import (
     DynamoDBApiKeyStore,
+    DynamoDBApprovalStore,
     DynamoDBIdempotencyStore,
     DynamoDBInviteStore,
+    DynamoDBJobCounterStore,
     DynamoDBJobStore,
     DynamoDBQueue,
     DynamoDBSecretStore,
@@ -27,8 +31,10 @@ from .dynamo import (
 )
 from .memory import (
     InMemoryApiKeyStore,
+    InMemoryApprovalStore,
     InMemoryIdempotencyStore,
     InMemoryInviteStore,
+    InMemoryJobCounterStore,
     InMemoryJobStore,
     InMemoryQueue,
     InMemorySecretStore,
@@ -46,6 +52,9 @@ _idempotency_store: Optional[IdempotencyStore] = None
 _secret_store: Optional[SecretStore] = None
 _job_store: Optional[JobStore] = None
 _queue: Optional[Queue] = None
+_approval_store: Optional[ApprovalStore] = None
+_execute_queue: Optional[Queue] = None
+_job_counter_store: Optional[JobCounterStore] = None
 
 
 def is_dynamodb() -> bool:
@@ -115,10 +124,33 @@ def get_queue() -> Queue:
     return _queue
 
 
+def get_approval_store() -> ApprovalStore:
+    global _approval_store
+    if _approval_store is None:
+        _approval_store = DynamoDBApprovalStore() if is_dynamodb() else InMemoryApprovalStore()
+    return _approval_store
+
+
+def get_execute_queue() -> Queue:
+    """Queue consumed by the worker after a human approves a PR write."""
+    global _execute_queue
+    if _execute_queue is None:
+        _execute_queue = DynamoDBQueue() if is_dynamodb() else InMemoryQueue()
+    return _execute_queue
+
+
+def get_job_counter_store() -> JobCounterStore:
+    global _job_counter_store
+    if _job_counter_store is None:
+        _job_counter_store = DynamoDBJobCounterStore() if is_dynamodb() else InMemoryJobCounterStore()
+    return _job_counter_store
+
+
 def reset_stores() -> None:
     """Reset singletons for test isolation."""
     global _invite_store, _user_store, _session_store, _api_key_store
     global _usage_store, _idempotency_store, _secret_store, _job_store, _queue
+    global _approval_store, _execute_queue, _job_counter_store
     _invite_store = None
     _user_store = None
     _session_store = None
@@ -128,3 +160,6 @@ def reset_stores() -> None:
     _secret_store = None
     _job_store = None
     _queue = None
+    _approval_store = None
+    _execute_queue = None
+    _job_counter_store = None

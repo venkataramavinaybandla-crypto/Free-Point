@@ -117,6 +117,31 @@ class IdempotencyStore(ABC):
         pass
 
 
+class ApprovalStore(ABC):
+    @abstractmethod
+    async def create_approval(self, approval: Dict[str, Any]) -> Dict[str, Any]:
+        pass
+
+    @abstractmethod
+    async def get_approval(self, approval_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    async def list_pending(self, user_id: str, now: int) -> List[Dict[str, Any]]:
+        pass
+
+    @abstractmethod
+    async def decide(
+        self, approval_id: str, user_id: str, decision: str, expected_hash: str, now: int
+    ) -> str:
+        """Atomically consume a pending approval.
+
+        Returns one of: ``ok``, ``not_found``, ``hash_mismatch``,
+        ``already_decided`` or ``expired``.
+        """
+        pass
+
+
 class SecretStore(ABC):
     @abstractmethod
     async def set_secret(self, user_id: str, name: str, encrypted_value: str, updated_at: int) -> None:
@@ -130,12 +155,36 @@ class SecretStore(ABC):
     async def list_secrets(self, user_id: str) -> List[Dict[str, Any]]:
         pass
 
+    @abstractmethod
+    async def delete_secret(self, user_id: str, name: str) -> bool:
+        pass
+
+
+class JobCounterStore(ABC):
+    @abstractmethod
+    async def increment_and_check(self, date_str: str, cap: int) -> Tuple[bool, int]:
+        """Atomically increment the counter for date_str and check against cap.
+
+        Returns (cap_exceeded, current_count).
+        """
+        pass
+
+    @abstractmethod
+    async def get_count(self, date_str: str) -> int:
+        pass
+
+    @abstractmethod
+    async def reset(self) -> None:
+        pass
+
 
 __all__ = [
     "ApiKeyStore",
+    "ApprovalStore",
     "IdempotencyStore",
     "InviteStore",
     "Job",
+    "JobCounterStore",
     "JobStatus",
     "JobStore",
     "Queue",

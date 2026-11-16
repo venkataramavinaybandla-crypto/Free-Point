@@ -23,6 +23,7 @@ class Job(BaseModel):
     result: Optional[Any] = None
     error: Optional[str] = None
     approval_artifact: Optional[Dict[str, Any]] = None
+    tainted: bool = False
     idempotency_key: Optional[str] = None
     model_url: Optional[str] = None
     user_id: Optional[str] = None
@@ -392,6 +393,54 @@ class InMemoryIdempotencyStore:
             }
 
 
+class InMemoryApprovalStore:
+    def __init__(self) -> None:
+        self._approvals: Dict[str, Dict[str, Any]] = {}
+        self._lock = asyncio.Lock()
+
+    async def create_approval(self, approval: Dict[str, Any]) -> Dict[str, Any]:
+        async with self._lock:
+            self._approvals[approval["id"]] = dict(approval)
+            return dict(approval)
+
+    async def get_approval(self, approval_id: str, user_id: str) -> Optional[Dict[str, Any]]:
+        async with self._lock:
+            record = self._approvals.get(approval_id)
+            if not record or record.get("user_id") != user_id:
+                return None
+            return dict(record)
+
+    async def list_pending(self, user_id: str, now: int) -> List[Dict[str, Any]]:
+        async with self._lock:
+            records = [
+                dict(r)
+                for r in self._approvals.values()
+                if r.get("user_id") == user_id
+                and r.get("status") == "pending"
+                and not r.get("used")
+                and int(r.get("expires_at", 0)) > now
+            ]
+            return sorted(records, key=lambda r: r.get("created_at", 0), reverse=True)
+
+    async def decide(
+        self, approval_id: str, user_id: str, decision: str, expected_hash: str, now: int
+    ) -> str:
+        async with self._lock:
+            record = self._approvals.get(approval_id)
+            if not record or record.get("user_id") != user_id:
+                return "not_found"
+            if record.get("payload_hash") != expected_hash:
+                return "hash_mismatch"
+            if record.get("used") or record.get("status") != "pending":
+                return "already_decided"
+            if int(record.get("expires_at", 0)) <= now:
+                return "expired"
+            record["status"] = decision
+            record["used"] = True
+            record["decided_at"] = now
+            return "ok"
+
+
 class InMemorySecretStore:
     def __init__(self) -> None:
         self._secrets: Dict[Tuple[str, str], Dict[str, Any]] = {}
@@ -420,3 +469,31 @@ class InMemorySecretStore:
                 if uid == user_id:
                     results.append({"name": name, "updated_at": doc["updated_at"]})
             return sorted(results, key=lambda x: x["name"])
+
+    async def delete_secret(self, user_id: str, name: str) -> bool:
+        async with self._lock:
+            return self._secrets.pop((user_id, name), None) is not None
+
+
+class InMemoryJobCounterStore:
+    def __init__(self) -> None:
+        self._counts: Dict[str, int] = {}
+        self._lock = asyncio.Lock()
+
+    async def increment_and_check(self, date_str: str, cap: int) -> Tuple[bool, int]:
+        async with self._lock:
+            current = self._counts.get(date_str, 0)
+            if current >= cap:
+                return True, current
+            current += 1
+            self._counts[date_str] = current
+            return False, current
+
+    async def get_count(self, date_str: str) -> int:
+        async with self._lock:
+            return self._counts.get(date_str, 0)
+
+    async def reset(self) -> None:
+        async with self._lock:
+            self._counts.clear()
+

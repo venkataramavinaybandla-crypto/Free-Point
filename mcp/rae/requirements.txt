@@ -1,0 +1,6 @@
+mcp==1.30.0
+httpx==0.28.1
+boto3==1.44.3
+uvicorn==0.54.0
+pyelftools==0.32
+pefile==2024.8.26

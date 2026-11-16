@@ -3,22 +3,29 @@
 import hashlib
 import json
 import os
+import re
 import time
 import uuid
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Response, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from ..auth.dependencies import AuthenticatedKey, require_api_key
 from ..core.agent_loop import AgentLoop
-from ..core.tools import ToolRegistry
+from ..core.mcp_tools import build_tool_registry
+from ..core.state import JobStatus
+from ..core.tools import unavailable_declared_tools
 from ..crypto.envelope import EnvelopeEncryptor
+from ..mcp_client.client import build_mcp_caller
+from ..mcp_client.rae_queue import build_rae_queue
 from ..providers.mock_provider import get_llm_provider
 from ..providers.openai_client import OpenAICompatibleProvider
 from ..security.ssrf import SSRFError, SSRFValidator, create_safe_client
 from ..store.factory import (
     get_idempotency_store,
+    get_job_counter_store,
     get_job_store,
     get_queue,
     get_secret_store,
@@ -26,13 +33,24 @@ from ..store.factory import (
 )
 
 router = APIRouter()
-tool_registry = ToolRegistry()
+TOOL_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]{1,40}$")
 
 
 class CreateJobRequest(BaseModel):
-    task: str = Field(..., description="The user objective or task for the agent harness")
-    tools: List[str] = Field(..., description="Explicitly declared tools allowlist for this job")
+    task: str = Field(..., min_length=1, max_length=8000, description="The user objective for the harness")
+    tools: List[str] = Field(
+        ..., min_length=1, max_length=2, description="One or two explicitly declared tools"
+    )
     model_url: Optional[str] = Field(None, description="Optional custom OpenAI-compatible endpoint URL")
+
+    @field_validator("tools")
+    @classmethod
+    def validate_tools(cls, tools: List[str]) -> List[str]:
+        if len(set(tools)) != len(tools):
+            raise ValueError("Declared tools must be unique.")
+        if any(not TOOL_NAME_PATTERN.fullmatch(name) for name in tools):
+            raise ValueError("Declared tool names must be lowercase snake_case.")
+        return tools
 
 
 class JobResponse(BaseModel):
@@ -46,6 +64,7 @@ class JobResponse(BaseModel):
     result: Optional[Any] = None
     error: Optional[str] = None
     approval_artifact: Optional[Dict[str, Any]] = None
+    tainted: bool = False
     idempotency_key: Optional[str] = None
     model_url: Optional[str] = None
     user_id: Optional[str] = None
@@ -125,6 +144,21 @@ async def create_job(
                 response.status_code = status.HTTP_200_OK
                 return JobResponse(**cached_job.model_dump())
 
+    # Enforce global daily job cap across all users
+    global_cap = int(os.environ.get("GLOBAL_DAILY_JOB_CAP", "200"))
+    today_utc = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    counter_store = get_job_counter_store()
+    exceeded, _ = await counter_store.increment_and_check(today_utc, global_cap)
+    if exceeded:
+        now_utc = datetime.now(timezone.utc)
+        tomorrow_utc = (now_utc + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        retry_after = max(1, int((tomorrow_utc - now_utc).total_seconds()))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Global daily job cap reached.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
     job = await job_store.create_job(
         task=req.task,
         declared_tools=req.tools,
@@ -142,12 +176,25 @@ async def create_job(
             encryptor = EnvelopeEncryptor()
             bearer_token = encryptor.decrypt(enc_token, user_id=caller.user_id, tool="model_bearer_token")
 
+    registry = build_tool_registry(
+        job.user_id or "", job.id, build_mcp_caller(), rae_queue=build_rae_queue()
+    )  # per-job tenant wiring
+    missing = unavailable_declared_tools(job.declared_tools, registry.names())
+    if missing:
+        job.status = JobStatus.FAILED
+        job.error = "One or more declared tools are not available."
+        await job_store.update_job(job)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="One or more declared tools are not available.",
+        )
+
     provider = (
         OpenAICompatibleProvider(base_url=job.model_url, api_key=bearer_token)
         if job.model_url
         else get_llm_provider()
     )
-    loop = AgentLoop(provider=provider, tool_registry=tool_registry)
+    loop = AgentLoop(provider=provider, tool_registry=registry)
     updated_job = await loop.run(job, request_id=request_id)
     await job_store.update_job(updated_job)
 

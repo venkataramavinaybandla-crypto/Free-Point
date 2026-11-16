@@ -1,0 +1,41 @@
+Agent Loop Ollama Fix - Test Evidence
+Run date: 2026-11-16T09:24:05Z
+Suite: 121 passed, 0 failed (pytest 9.2.0, Python 3.13.17)
+Ruff: All checks passed
+
+Changes
+-------
+harness/app/core/agent_loop.py
+  - AGENT_OUTPUT_SCHEMA: flat object, all 4 fields required (action, tool_name, arguments, final_answer),
+    no oneOf/anyOf/allOf/if/then/ref, additionalProperties: False
+  - _build_system_prompt(): lists declared tools with arg names + one example per action, temperature 0
+  - _preprocess(): strips <think>...</think> and json fences before json.loads
+  - _normalize_keys(): maps tool/name/function -> tool_name; args/parameters/input/tool_args -> arguments
+  - action 'final' / final_answer replaces old 'finish' / final_response
+  - arguments replaces old tool_args in call_tool branch
+  - On validation failure: retry message names exact error + repeats FLAT_SHAPE_HINT (max 2 retries)
+  - Audit log: redacted raw output (1000 chars) via redact_secrets
+  - job.error includes raw only when DEBUG_MODEL_OUTPUT=true
+  - provider.generate() called with temperature=0.0
+
+harness/app/providers/mock_provider.py  (prior session)
+  - generate() signature: temperature: float = 0.0
+  - All built-in auto-responses use new schema (action: final/call_tool, final_answer, arguments)
+
+harness/app/providers/base.py  (prior session)
+  - generate() abstract signature updated with temperature: float = 0.0
+
+Tests added / updated
+---------------------
+tests/test_agent_loop.py
+  - Updated all scripted_responses to new schema
+  - test_schema_retry_exhaustion_fails: checks 'Model failed after 2 retries'
+  - NEW: test_ollama_key_normalization_and_preprocessing:
+      * key 'tool' aliased to tool_name (loop completes)
+      * <think> block stripped before parse
+      * json fence stripped before parse
+      * undeclared tool rejected with Security policy violation
+
+tests/test_harness_mcp.py        - tool_args -> arguments, final_answer: '' added
+tests/test_gmail_mcp.py          - tool_args -> arguments, final_answer: '' added
+tests/injection/test_prompt_injection.py - tool_args -> arguments, final_answer: '' added

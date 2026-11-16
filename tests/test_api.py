@@ -57,6 +57,22 @@ async def test_create_and_get_job():
 
 
 @pytest.mark.asyncio
+async def test_declared_tools_limited_and_regex_validated():
+    api_key = await _create_test_key()
+    headers = {"Authorization": f"Bearer {api_key}"}
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
+        too_many = await client.post(
+            "/v1/jobs", json={"task": "x", "tools": ["echo", "utc_time", "rag_query"]}, headers=headers
+        )
+        assert too_many.status_code == 422
+
+        bad_name = await client.post(
+            "/v1/jobs", json={"task": "x", "tools": ["Bad-Tool;"]}, headers=headers
+        )
+        assert bad_name.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_model_test_endpoint_rejects_ssrf():
     api_key = await _create_test_key()
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:

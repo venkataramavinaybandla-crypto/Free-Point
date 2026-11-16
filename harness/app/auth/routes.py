@@ -1,5 +1,6 @@
 """Web session routes for signup, login, logout, keys, and user secrets."""
 
+import re
 import secrets
 import time
 from typing import Dict, List, Optional
@@ -8,6 +9,11 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 
 from ..crypto.envelope import EnvelopeEncryptor
+from ..mcp_client.github_config import (
+    GitHubConfigError,
+    load_github_credentials,
+    store_github_config,
+)
 from ..security.ssrf import SSRFError, SSRFValidator
 from ..store.factory import (
     get_api_key_store,
@@ -26,11 +32,13 @@ from .tokens import (
 
 auth_router = APIRouter(tags=["Auth & Web Session"])
 
+EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
 
 class SignupRequest(BaseModel):
-    invite: str = Field(..., description="Single-use invite code")
     email: str = Field(..., description="User email address")
     password: str = Field(..., min_length=8, description="User password")
+    invite: Optional[str] = Field(None, description="Optional invite code (ignored)")
 
 
 class LoginRequest(BaseModel):
@@ -68,20 +76,28 @@ class SecretSummary(BaseModel):
     updated_at: int
 
 
+class GitHubConfigRequest(BaseModel):
+    token: str = Field(..., min_length=1, max_length=4096)
+    allowlist: List[str] = Field(..., min_length=1, max_length=20)
+    base_branch: str = Field("main", min_length=1, max_length=120)
+
+
+class GitHubConfigResponse(BaseModel):
+    configured: bool
+    allowlist: List[str] = Field(default_factory=list)
+    base_branch: str = "main"
+
+
 @auth_router.post("/auth/signup", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
 async def signup(req: SignupRequest, request: Request, response: Response) -> AuthResponse:
-    """Register a new user account with a valid invite code."""
+    """Register a new user account with email and password."""
     check_ip_rate_limit(request, "signup")
 
-    from ..store.factory import get_invite_store
-
-    invite_store = get_invite_store()
-    code_hash = hash_sha256(req.invite.strip())
-    consumed = await invite_store.consume_invite(code_hash)
-    if not consumed:
+    normalized_email = req.email.strip().lower()
+    if not EMAIL_REGEX.match(normalized_email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Signup failed: invalid invite code or email already registered.",
+            detail="Could not create account.",
         )
 
     user_store = get_user_store()
@@ -92,14 +108,14 @@ async def signup(req: SignupRequest, request: Request, response: Response) -> Au
     try:
         user = await user_store.create_user(
             user_id=user_id,
-            email=req.email,
+            email=normalized_email,
             password_hash=pwd_hash,
             created_at=now_ts,
         )
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Signup failed: invalid invite code or email already registered.",
+            detail="Could not create account.",
         )
 
     # Issue session
@@ -346,6 +362,44 @@ async def put_secret(
     return {"name": name, "status": "stored"}
 
 
+@auth_router.put("/github/config", response_model=GitHubConfigResponse)
+async def put_github_config(
+    req: GitHubConfigRequest,
+    current_user: AuthenticatedUser = Depends(require_session),
+) -> GitHubConfigResponse:
+    """Store the encrypted GitHub token and per-user repository allowlist."""
+    try:
+        credentials = await store_github_config(
+            current_user.user_id,
+            req.token,
+            req.allowlist,
+            req.base_branch,
+        )
+    except GitHubConfigError as err:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(err))
+    return GitHubConfigResponse(
+        configured=True,
+        allowlist=list(credentials.allowlist),
+        base_branch=credentials.base_branch,
+    )
+
+
+@auth_router.get("/github/config", response_model=GitHubConfigResponse)
+async def get_github_config(
+    current_user: AuthenticatedUser = Depends(require_session),
+) -> GitHubConfigResponse:
+    """Return allowlist metadata only; the token is never returned."""
+    try:
+        credentials = await load_github_credentials(current_user.user_id)
+    except GitHubConfigError:
+        return GitHubConfigResponse(configured=False)
+    return GitHubConfigResponse(
+        configured=True,
+        allowlist=list(credentials.allowlist),
+        base_branch=credentials.base_branch,
+    )
+
+
 @auth_router.get("/secrets", response_model=List[SecretSummary])
 async def list_secrets(
     current_user: AuthenticatedUser = Depends(require_session),
@@ -354,3 +408,14 @@ async def list_secrets(
     secret_store = get_secret_store()
     secrets_list = await secret_store.list_secrets(current_user.user_id)
     return [SecretSummary(**s) for s in secrets_list]
+
+
+@auth_router.delete("/secrets/{name}")
+async def delete_secret(
+    name: str,
+    current_user: AuthenticatedUser = Depends(require_session),
+) -> Dict[str, str]:
+    """Delete a stored user secret."""
+    secret_store = get_secret_store()
+    await secret_store.delete_secret(current_user.user_id, name)
+    return {"name": name, "status": "deleted"}
